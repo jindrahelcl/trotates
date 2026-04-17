@@ -53,9 +53,9 @@ function serveStatic(res, filePath) {
 }
 
 // ── Limits ────────────────────────────────────────────────────────────────
-const MAX_GRID      = 6;   // max tiles per side
+const MAX_GRID      = 20;  // max tiles per side
 const RATE_WINDOW   = 60 * 1000;  // 1 minute
-const RATE_MAX      = 60;  // max tile requests per IP per minute (6×6=36 per game)
+const RATE_MAX      = 500; // max tile requests per IP per minute (20×20=400 per game)
 
 const rateCounts = new Map(); // ip → [timestamp, ...]
 
