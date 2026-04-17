@@ -184,25 +184,29 @@
     const EXTRA = 720; // 2 full clockwise spins
     const DURATION = 1800; // ms
 
-    grid.querySelectorAll('.tile').forEach((cell, i) => {
-      const img = cell.querySelector('img');
-      // Normalize to [0, 360) so we always start from a known base
-      const base = tiles[i].rotation % 360;
+    const imgs = [...grid.querySelectorAll('.tile img')];
+
+    // Phase 1: disable transitions and snap all tiles to 0deg
+    imgs.forEach(img => {
       img.style.transition = 'none';
-      img.style.transform = `rotate(${base}deg)`;
-      img.getBoundingClientRect(); // force reflow
-      img.style.transition = `transform ${DURATION}ms cubic-bezier(0.12, 0.8, 0.2, 1)`;
-      img.style.transform = `rotate(${base + EXTRA}deg)`;
-      tiles[i].rotation = base + EXTRA;
+      img.style.transform = 'rotate(0deg)';
     });
 
-    setTimeout(() => {
-      // Restore the normal tile transition
-      grid.querySelectorAll('.tile img').forEach(img => {
-        img.style.transition = '';
+    // Double rAF ensures the browser has painted the reset before animating
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        imgs.forEach(img => {
+          img.style.transition = `transform ${DURATION}ms cubic-bezier(0.12, 0.8, 0.2, 1)`;
+          img.style.transform = `rotate(${EXTRA}deg)`;
+        });
+        tiles.forEach(t => { t.rotation = EXTRA; });
+
+        setTimeout(() => {
+          imgs.forEach(img => { img.style.transition = ''; });
+          onComplete();
+        }, DURATION + 50);
       });
-      onComplete();
-    }, DURATION + 50);
+    });
   }
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
