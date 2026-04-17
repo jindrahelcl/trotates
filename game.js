@@ -96,7 +96,13 @@
 
   // ── Render ────────────────────────────────────────────────────────────────
   function render(cols) {
-    grid.style.gridTemplateColumns = `repeat(${cols}, 192px)`;
+    const maxSize = 192;
+    const padding = 32;
+    const gap = 3;
+    const available = window.innerWidth - padding - (gap * (cols - 1));
+    const tileSize = Math.min(maxSize, Math.floor(available / cols));
+    grid.style.setProperty('--tile-size', tileSize + 'px');
+    grid.style.gridTemplateColumns = `repeat(${cols}, ${tileSize}px)`;
     grid.innerHTML = '';
 
     tiles.forEach((tile, idx) => {
@@ -252,6 +258,10 @@
 
   newGameBtn.addEventListener('click', newGame);
   playAgainBtn.addEventListener('click', newGame);
+  window.addEventListener('resize', () => {
+    const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value) || 4));
+    render(cols);
+  });
 
   newGame();
   fetchLeaderboard();
