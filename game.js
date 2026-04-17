@@ -234,8 +234,8 @@
     timerEl.textContent = '0:00';
     winOverlay.classList.add('hidden');
 
-    const cols = Math.max(1, parseInt(cfgWidth.value)  || 4);
-    const rows = Math.max(1, parseInt(cfgHeight.value) || 4);
+    const cols = Math.min(6, Math.max(1, parseInt(cfgWidth.value)  || 4));
+    const rows = Math.min(6, Math.max(1, parseInt(cfgHeight.value) || 4));
     currentZoom  = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
 
     tiles = buildTileSet(cols, rows, currentZoom);

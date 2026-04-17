@@ -52,10 +52,43 @@ function serveStatic(res, filePath) {
   });
 }
 
+// ── Limits ────────────────────────────────────────────────────────────────
+const MAX_GRID      = 6;   // max tiles per side
+const RATE_WINDOW   = 60 * 1000;  // 1 minute
+const RATE_MAX      = 60;  // max tile requests per IP per minute (6×6=36 per game)
+
+const rateCounts = new Map(); // ip → [timestamp, ...]
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const times = (rateCounts.get(ip) || []).filter(t => now - t < RATE_WINDOW);
+  if (times.length >= RATE_MAX) return true;
+  times.push(now);
+  rateCounts.set(ip, times);
+  return false;
+}
+
+// Clean up rate map every minute to avoid unbounded growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, times] of rateCounts) {
+    const fresh = times.filter(t => now - t < RATE_WINDOW);
+    if (fresh.length === 0) rateCounts.delete(ip);
+    else rateCounts.set(ip, fresh);
+  }
+}, RATE_WINDOW);
+
 // ── Tile proxy ────────────────────────────────────────────────────────────
 // Browser requests: GET /tiles/{layer}/{z}/{x}/{y}
 // Proxied to:       https://api.mapy.com/v1/maptiles/{layer}/256/{z}/{x}/{y}?apikey=...
-function proxyTile(res, layer, z, x, y) {
+function proxyTile(req, res, layer, z, x, y) {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  if (isRateLimited(ip)) {
+    res.writeHead(429);
+    res.end('Too many requests');
+    return;
+  }
+
   const upstream = `https://api.mapy.com/v1/maptiles/${layer}/256/${z}/${x}/${y}?apikey=${encodeURIComponent(API_KEY)}`;
 
   https.get(upstream, { headers: { 'User-Agent': 'map-rotator/1.0' } }, (upRes) => {
@@ -142,7 +175,7 @@ const server = http.createServer((req, res) => {
   const tileMatch = url.match(TILE_RE);
   if (tileMatch) {
     const [, layer, z, x, y] = tileMatch;
-    proxyTile(res, layer, z, x, y);
+    proxyTile(req, res, layer, z, x, y);
     return;
   }
 
