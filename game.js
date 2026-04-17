@@ -14,7 +14,6 @@
 
   const CZ_BBOX = { minLat: 48.55, maxLat: 51.06, minLng: 12.09, maxLng: 18.87 };
 
-  // Ray-casting point-in-polygon test
   function insidePolygon(lat, lng, poly) {
     let inside = false;
     for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -36,7 +35,7 @@
     }
   }
 
-  let tiles = [];       // [{x, y, rotation}]
+  let tiles = [];
   let moves = 0;
   let startTime = null;
   let timerInterval = null;
@@ -44,13 +43,23 @@
   let gameOver = false;
   let currentLocKey = '';
   let currentTile = { x: 0, y: 0 };
-  let pendingTile = null; // {tx, ty} set when loading from a short URL
+  let pendingTile = null;
+
+  // Hardcore mode state
+  let hardcoreMode = false;
+  let correctPositions = [];
+  let dragSrcIdx = null;
+  let touchDragSrc = null;
+  let touchDragging = false;
+  let touchStartX = 0, touchStartY = 0;
+  const DRAG_THRESHOLD = 12;
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const cfgWidth    = document.getElementById('cfg-width');
   const cfgHeight   = document.getElementById('cfg-height');
   const cfgZoom     = document.getElementById('cfg-zoom');
   const cfgNickname = document.getElementById('cfg-nickname');
+  const cfgHardcore = document.getElementById('cfg-hardcore');
 
   const grid        = document.getElementById('grid');
   const timerEl     = document.getElementById('timer');
@@ -98,7 +107,6 @@
       const raw = randomLocation();
       center = latLngToTile(raw.lat, raw.lng, zoom);
     }
-    // Snap currentLoc to tile center so same tile always produces the same key
     currentLoc = tileToLatLng(center.x, center.y, zoom);
     currentTile = center;
     currentLocKey = `${center.x},${center.y},${zoom},${cols},${rows}`;
@@ -120,9 +128,17 @@
 
   function scramble(tileSet) {
     tileSet.forEach(t => {
-      // Pick 1, 2, or 3 (never 0 so every tile actually needs rotating)
       t.rotation = (1 + Math.floor(Math.random() * 3)) * 90;
     });
+    if (hardcoreMode) {
+      // Fisher-Yates shuffle of tile positions (x/y travel together)
+      for (let i = tileSet.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tx = tileSet[i].x, ty = tileSet[i].y;
+        tileSet[i].x = tileSet[j].x; tileSet[i].y = tileSet[j].y;
+        tileSet[j].x = tx; tileSet[j].y = ty;
+      }
+    }
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -139,6 +155,7 @@
     tiles.forEach((tile, idx) => {
       const cell = document.createElement('div');
       cell.className = 'tile';
+      if (hardcoreMode) cell.draggable = true;
 
       const img = document.createElement('img');
       img.src = tileUrl(tile.x, tile.y, currentZoom);
@@ -152,24 +169,147 @@
     });
   }
 
-  // ── Interaction ───────────────────────────────────────────────────────────
+  // ── Swap ──────────────────────────────────────────────────────────────────
+  function swapTiles(a, b) {
+    if (!startTime) startTimer();
+    const { x: ax, y: ay, rotation: ar } = tiles[a];
+    tiles[a].x = tiles[b].x; tiles[a].y = tiles[b].y; tiles[a].rotation = tiles[b].rotation;
+    tiles[b].x = ax; tiles[b].y = ay; tiles[b].rotation = ar;
+
+    const cells = grid.querySelectorAll('.tile');
+    const imgA = cells[a].querySelector('img');
+    const imgB = cells[b].querySelector('img');
+    imgA.src = tileUrl(tiles[a].x, tiles[a].y, currentZoom);
+    imgA.style.transform = `rotate(${tiles[a].rotation}deg)`;
+    imgB.src = tileUrl(tiles[b].x, tiles[b].y, currentZoom);
+    imgB.style.transform = `rotate(${tiles[b].rotation}deg)`;
+
+    moves++;
+    movesEl.textContent = `Moves: ${moves}`;
+    setTimeout(checkWin, 50);
+  }
+
+  function clearDragClasses() {
+    grid.querySelectorAll('.tile').forEach(c => c.classList.remove('dragging', 'drag-over'));
+  }
+
+  // ── Desktop drag-and-drop (hardcore only) ─────────────────────────────────
+  grid.addEventListener('dragstart', e => {
+    if (!hardcoreMode || admiring || gameOver) return;
+    const cell = e.target.closest('.tile');
+    if (!cell) return;
+    dragSrcIdx = parseInt(cell.dataset.idx);
+    cell.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  grid.addEventListener('dragover', e => {
+    if (!hardcoreMode || dragSrcIdx === null) return;
+    e.preventDefault();
+    const cell = e.target.closest('.tile');
+    if (!cell) return;
+    if (!cell.classList.contains('drag-over')) {
+      grid.querySelectorAll('.tile.drag-over').forEach(c => c.classList.remove('drag-over'));
+      if (parseInt(cell.dataset.idx) !== dragSrcIdx) cell.classList.add('drag-over');
+    }
+    e.dataTransfer.dropEffect = 'move';
+  });
+
+  grid.addEventListener('dragleave', e => {
+    if (!grid.contains(e.relatedTarget)) {
+      grid.querySelectorAll('.tile.drag-over').forEach(c => c.classList.remove('drag-over'));
+    }
+  });
+
+  grid.addEventListener('drop', e => {
+    if (!hardcoreMode || dragSrcIdx === null) return;
+    e.preventDefault();
+    const cell = e.target.closest('.tile');
+    if (cell) {
+      const dropIdx = parseInt(cell.dataset.idx);
+      if (dropIdx !== dragSrcIdx) swapTiles(dragSrcIdx, dropIdx);
+    }
+    clearDragClasses();
+    dragSrcIdx = null;
+  });
+
+  grid.addEventListener('dragend', () => {
+    clearDragClasses();
+    dragSrcIdx = null;
+  });
+
+  // ── Click (rotate) ────────────────────────────────────────────────────────
   grid.addEventListener('click', e => {
     const cell = e.target.closest('.tile');
     if (cell) rotateTile(parseInt(cell.dataset.idx));
   });
 
+  // ── Touch (rotate on tap, swap on drag) ───────────────────────────────────
   grid.addEventListener('touchstart', e => {
     e.preventDefault();
-    const rotated = new Set();
-    for (const touch of e.changedTouches) {
+    if (!hardcoreMode) {
+      // Normal mode: rotate on every touch point immediately
+      const rotated = new Set();
+      for (const touch of e.changedTouches) {
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        const cell = el && el.closest('.tile');
+        if (!cell) continue;
+        const idx = parseInt(cell.dataset.idx);
+        if (!rotated.has(idx)) { rotated.add(idx); rotateTile(idx); }
+      }
+    } else {
+      // Hardcore: track first touch for potential drag
+      const touch = e.changedTouches[0];
       const el = document.elementFromPoint(touch.clientX, touch.clientY);
       const cell = el && el.closest('.tile');
-      if (!cell) continue;
-      const idx = parseInt(cell.dataset.idx);
-      if (!rotated.has(idx)) {
-        rotated.add(idx);
-        rotateTile(idx);
+      if (!cell || admiring || gameOver) return;
+      touchDragSrc = { idx: parseInt(cell.dataset.idx), id: touch.identifier };
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      touchDragging = false;
+      cell.classList.add('dragging');
+    }
+  }, { passive: false });
+
+  grid.addEventListener('touchmove', e => {
+    if (!hardcoreMode || !touchDragSrc) return;
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      if (touch.identifier !== touchDragSrc.id) continue;
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      if (!touchDragging && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+        touchDragging = true;
       }
+      if (touchDragging) {
+        grid.querySelectorAll('.tile.drag-over').forEach(c => c.classList.remove('drag-over'));
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        const cell = el && el.closest('.tile');
+        if (cell && parseInt(cell.dataset.idx) !== touchDragSrc.idx) {
+          cell.classList.add('drag-over');
+        }
+      }
+    }
+  }, { passive: false });
+
+  grid.addEventListener('touchend', e => {
+    if (!hardcoreMode || !touchDragSrc) return;
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      if (touch.identifier !== touchDragSrc.id) continue;
+      clearDragClasses();
+      if (touchDragging) {
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        const cell = el && el.closest('.tile');
+        if (cell) {
+          const dropIdx = parseInt(cell.dataset.idx);
+          if (dropIdx !== touchDragSrc.idx) swapTiles(touchDragSrc.idx, dropIdx);
+        }
+      } else {
+        rotateTile(touchDragSrc.idx);
+      }
+      touchDragSrc = null;
+      touchDragging = false;
     }
   }, { passive: false });
 
@@ -183,8 +323,7 @@
     movesEl.textContent = `Moves: ${moves}`;
 
     const cells = grid.querySelectorAll('.tile');
-    const cell = cells[idx];
-    const img = cell.querySelector('img');
+    const img = cells[idx].querySelector('img');
     img.style.transform = `rotate(${tile.rotation}deg)`;
 
     setTimeout(checkWin, 270);
@@ -192,7 +331,10 @@
 
   function checkWin() {
     if (gameOver) return;
-    if (tiles.every(t => t.rotation % 360 === 0)) {
+    const rotOk = tiles.every(t => t.rotation % 360 === 0);
+    const posOk = !hardcoreMode || tiles.every((t, i) =>
+      t.x === correctPositions[i].x && t.y === correctPositions[i].y);
+    if (rotOk && posOk) {
       gameOver = true;
       stopTimer();
       const elapsed = elapsedSeconds();
@@ -363,16 +505,20 @@
     anonPrompt.classList.add('hidden');
     admiring = false;
     gameOver = false;
+    dragSrcIdx = null;
+    touchDragSrc = null;
+    touchDragging = false;
 
+    hardcoreMode = cfgHardcore.checked;
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
     const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
     currentZoom = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
 
     tiles = buildTileSet(cols, rows, currentZoom);
+    if (hardcoreMode) correctPositions = tiles.map(t => ({ x: t.x, y: t.y }));
     scramble(tiles);
     render(cols);
 
-    // Register short URL for this puzzle
     fetch('/shorten', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -394,6 +540,7 @@
 
   newGameBtn.addEventListener('click', newGame);
   playAgainBtn.addEventListener('click', newGame);
+  cfgHardcore.addEventListener('change', newGame);
   admireBtn.addEventListener('click', () => {
     admiring = true;
     winOverlay.classList.add('hidden');
@@ -403,7 +550,7 @@
     render(cols);
   });
 
-  // Resolve short URL on page load (path /s/CODE or legacy ?s=CODE)
+  // Resolve short URL on page load
   const pathMatch = window.location.pathname.match(/^\/s\/([a-z]{10})$/);
   const shortCode = pathMatch ? pathMatch[1] : null;
 

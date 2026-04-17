@@ -53,6 +53,11 @@ header h1 {
   color: #aaa;
 }
 
+.hardcore-label {
+  cursor: pointer;
+  user-select: none;
+}
+
 .controls input[type="text"] {
   width: 90px;
   padding: 5px 8px;
@@ -129,6 +134,17 @@ main {
 .tile:hover {
   box-shadow: 0 0 0 3px #e94560;
   z-index: 1;
+}
+
+.tile.dragging {
+  opacity: 0.45;
+  box-shadow: 0 0 0 3px #4ecca3;
+  z-index: 2;
+}
+
+.tile.drag-over {
+  box-shadow: 0 0 0 3px #e94560;
+  z-index: 2;
 }
 
 
