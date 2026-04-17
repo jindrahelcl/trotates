@@ -50,9 +50,11 @@
   let correctPositions = [];
   let dragSrcIdx = null;
   let suppressClick = false;  // blocks click handler after a drag-drop swap
-  let touchDragSrc = null;
-  let touchDragging = false;
-  let touchStartX = 0, touchStartY = 0;
+  let isDragging = false;     // true once movement threshold crossed
+  let dragStartX = 0, dragStartY = 0;
+  let ghostSize = 0;
+  let currentTileSize = 192;
+  let touchDragSrc = null;    // { idx, id } for touch
   const DRAG_THRESHOLD = 12;
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
@@ -74,6 +76,33 @@
   const anonPrompt  = document.getElementById('anon-prompt');
   const anonName    = document.getElementById('anon-name');
   const anonSaveBtn = document.getElementById('anon-save-btn');
+
+  // ── Drag ghost ───────────────────────────────────────────────────────────
+  const dragGhost = document.createElement('div');
+  dragGhost.className = 'drag-ghost';
+  const dragGhostImg = document.createElement('img');
+  dragGhostImg.draggable = false;
+  dragGhost.appendChild(dragGhostImg);
+  document.body.appendChild(dragGhost);
+
+  function showGhost(tileIdx, x, y) {
+    ghostSize = Math.round(currentTileSize * 1.15);
+    dragGhost.style.width  = ghostSize + 'px';
+    dragGhost.style.height = ghostSize + 'px';
+    dragGhostImg.src = tileUrl(tiles[tileIdx].x, tiles[tileIdx].y, currentZoom);
+    dragGhostImg.style.transform = `rotate(${tiles[tileIdx].rotation}deg)`;
+    dragGhost.style.display = 'block';
+    positionGhost(x, y);
+  }
+
+  function positionGhost(x, y) {
+    dragGhost.style.left = (x - ghostSize / 2) + 'px';
+    dragGhost.style.top  = (y - ghostSize / 2) + 'px';
+  }
+
+  function hideGhost() {
+    dragGhost.style.display = 'none';
+  }
 
   // ── Tile math (Web Mercator) ──────────────────────────────────────────────
   function latLngToTile(lat, lng, z) {
@@ -149,6 +178,7 @@
     const gap = 3;
     const available = window.innerWidth - padding - (gap * (cols - 1));
     const tileSize = Math.min(maxSize, Math.floor(available / cols));
+    currentTileSize = tileSize;
     grid.style.setProperty('--tile-size', tileSize + 'px');
     grid.style.gridTemplateColumns = `repeat(${cols}, ${tileSize}px)`;
     grid.innerHTML = '';
@@ -156,7 +186,6 @@
     tiles.forEach((tile, idx) => {
       const cell = document.createElement('div');
       cell.className = 'tile';
-      if (nightmareMode) cell.draggable = true;
 
       const img = document.createElement('img');
       img.src = tileUrl(tile.x, tile.y, currentZoom);
@@ -193,56 +222,57 @@
     setTimeout(checkWin, 50);
   }
 
-  function clearDragClasses() {
+  function clearDrag() {
     grid.querySelectorAll('.tile').forEach(c => c.classList.remove('dragging', 'drag-over'));
+    hideGhost();
   }
 
-  // ── Desktop drag-and-drop (hardcore only) ─────────────────────────────────
-  grid.addEventListener('dragstart', e => {
+  // ── Desktop drag (nightmare mode) — custom ghost, no HTML5 DnD ──────────
+  grid.addEventListener('mousedown', e => {
     if (!nightmareMode || admiring || gameOver) return;
     const cell = e.target.closest('.tile');
     if (!cell) return;
+    e.preventDefault();
     dragSrcIdx = parseInt(cell.dataset.idx);
-    cell.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    isDragging = false;
   });
 
-  grid.addEventListener('dragover', e => {
+  document.addEventListener('mousemove', e => {
     if (!nightmareMode || dragSrcIdx === null) return;
-    e.preventDefault();
-    const cell = e.target.closest('.tile');
-    if (!cell) return;
-    if (!cell.classList.contains('drag-over')) {
-      grid.querySelectorAll('.tile.drag-over').forEach(c => c.classList.remove('drag-over'));
-      if (parseInt(cell.dataset.idx) !== dragSrcIdx) cell.classList.add('drag-over');
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    if (!isDragging && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+      isDragging = true;
+      grid.querySelectorAll('.tile')[dragSrcIdx].classList.add('dragging');
+      showGhost(dragSrcIdx, e.clientX, e.clientY);
     }
-    e.dataTransfer.dropEffect = 'move';
+    if (isDragging) {
+      positionGhost(e.clientX, e.clientY);
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = el && el.closest('.tile');
+      grid.querySelectorAll('.tile.drag-over').forEach(c => c.classList.remove('drag-over'));
+      if (cell && parseInt(cell.dataset.idx) !== dragSrcIdx) cell.classList.add('drag-over');
+    }
   });
 
-  grid.addEventListener('dragleave', e => {
-    if (!grid.contains(e.relatedTarget)) {
-      grid.querySelectorAll('.tile.drag-over').forEach(c => c.classList.remove('drag-over'));
-    }
-  });
-
-  grid.addEventListener('drop', e => {
+  document.addEventListener('mouseup', e => {
     if (!nightmareMode || dragSrcIdx === null) return;
-    e.preventDefault();
-    const cell = e.target.closest('.tile');
-    if (cell) {
-      const dropIdx = parseInt(cell.dataset.idx);
-      if (dropIdx !== dragSrcIdx) {
-        swapTiles(dragSrcIdx, dropIdx);
-        suppressClick = true;  // drop target receives a click event after drop in some browsers
+    if (isDragging) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = el && el.closest('.tile');
+      if (cell) {
+        const dropIdx = parseInt(cell.dataset.idx);
+        if (dropIdx !== dragSrcIdx) {
+          swapTiles(dragSrcIdx, dropIdx);
+          suppressClick = true;
+        }
       }
+      clearDrag();
     }
-    clearDragClasses();
     dragSrcIdx = null;
-  });
-
-  grid.addEventListener('dragend', () => {
-    clearDragClasses();
-    dragSrcIdx = null;
+    isDragging = false;
   });
 
   // ── Click (rotate) ────────────────────────────────────────────────────────
@@ -266,16 +296,15 @@
         if (!rotated.has(idx)) { rotated.add(idx); rotateTile(idx); }
       }
     } else {
-      // Hardcore: track first touch for potential drag
+      // Nightmare: record touch, wait for threshold before showing ghost
       const touch = e.changedTouches[0];
       const el = document.elementFromPoint(touch.clientX, touch.clientY);
       const cell = el && el.closest('.tile');
       if (!cell || admiring || gameOver) return;
       touchDragSrc = { idx: parseInt(cell.dataset.idx), id: touch.identifier };
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      touchDragging = false;
-      cell.classList.add('dragging');
+      dragStartX = touch.clientX;
+      dragStartY = touch.clientY;
+      isDragging = false;
     }
   }, { passive: false });
 
@@ -284,12 +313,15 @@
     e.preventDefault();
     for (const touch of e.changedTouches) {
       if (touch.identifier !== touchDragSrc.id) continue;
-      const dx = touch.clientX - touchStartX;
-      const dy = touch.clientY - touchStartY;
-      if (!touchDragging && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
-        touchDragging = true;
+      const dx = touch.clientX - dragStartX;
+      const dy = touch.clientY - dragStartY;
+      if (!isDragging && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+        isDragging = true;
+        grid.querySelectorAll('.tile')[touchDragSrc.idx].classList.add('dragging');
+        showGhost(touchDragSrc.idx, touch.clientX, touch.clientY);
       }
-      if (touchDragging) {
+      if (isDragging) {
+        positionGhost(touch.clientX, touch.clientY);
         grid.querySelectorAll('.tile.drag-over').forEach(c => c.classList.remove('drag-over'));
         const el = document.elementFromPoint(touch.clientX, touch.clientY);
         const cell = el && el.closest('.tile');
@@ -305,8 +337,8 @@
     e.preventDefault();
     for (const touch of e.changedTouches) {
       if (touch.identifier !== touchDragSrc.id) continue;
-      clearDragClasses();
-      if (touchDragging) {
+      clearDrag();
+      if (isDragging) {
         const el = document.elementFromPoint(touch.clientX, touch.clientY);
         const cell = el && el.closest('.tile');
         if (cell) {
@@ -320,7 +352,7 @@
         rotateTile(touchDragSrc.idx);
       }
       touchDragSrc = null;
-      touchDragging = false;
+      isDragging = false;
     }
   }, { passive: false });
 
@@ -518,8 +550,9 @@
     gameOver = false;
     dragSrcIdx = null;
     suppressClick = false;
+    isDragging = false;
     touchDragSrc = null;
-    touchDragging = false;
+    hideGhost();
 
     nightmareMode = cfgNightmare.checked;
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));

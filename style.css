@@ -137,14 +137,31 @@ main {
 }
 
 .tile.dragging {
-  opacity: 0.45;
-  box-shadow: 0 0 0 3px #4ecca3;
-  z-index: 2;
+  opacity: 0.25;
 }
 
 .tile.drag-over {
   box-shadow: 0 0 0 3px #e94560;
   z-index: 2;
+}
+
+/* Custom drag ghost — follows cursor/finger */
+.drag-ghost {
+  display: none;
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.7);
+  will-change: left, top;
+}
+
+.drag-ghost img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
 }
 
 
