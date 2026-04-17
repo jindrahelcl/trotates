@@ -2,8 +2,6 @@
 
 A browser puzzle game using real map tiles from [mapy.com](https://mapy.com). A grid of tiles from a random location in Czechia is scrambled by rotating each tile. Click (or tap) to rotate tiles back into the correct orientation.
 
-![screenshot placeholder](screenshot.png)
-
 ## Features
 
 - Real map tiles from mapy.com (outdoor layer)
