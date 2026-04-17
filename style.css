@@ -49,6 +49,21 @@ header h1 {
   color: #aaa;
 }
 
+.controls input[type="text"] {
+  width: 110px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #eee;
+  font-size: 0.85rem;
+}
+
+.controls input[type="text"]:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
 .controls input[type="number"] {
   width: 52px;
   padding: 5px 6px;
@@ -230,6 +245,11 @@ main {
   text-align: center;
   color: #555;
   padding: 20px !important;
+}
+
+.lb-anon {
+  color: #555;
+  font-style: italic;
 }
 
 .lb-avg td {

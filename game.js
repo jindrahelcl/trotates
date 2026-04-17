@@ -42,9 +42,10 @@
   let timerInterval = null;
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
-  const cfgWidth  = document.getElementById('cfg-width');
-  const cfgHeight = document.getElementById('cfg-height');
-  const cfgZoom   = document.getElementById('cfg-zoom');
+  const cfgWidth    = document.getElementById('cfg-width');
+  const cfgHeight   = document.getElementById('cfg-height');
+  const cfgZoom     = document.getElementById('cfg-zoom');
+  const cfgNickname = document.getElementById('cfg-nickname');
 
   const grid       = document.getElementById('grid');
   const timerEl    = document.getElementById('timer');
@@ -148,10 +149,11 @@
   function postSolve(time) {
     const cols = Math.max(1, parseInt(cfgWidth.value)  || 4);
     const rows = Math.max(1, parseInt(cfgHeight.value) || 4);
+    const nickname = cfgNickname.value.trim() || 'anonymous';
     fetch('/leaderboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ time, moves, width: cols, height: rows, zoom: currentZoom }),
+      body: JSON.stringify({ time, moves, width: cols, height: rows, zoom: currentZoom, nickname }),
     })
       .then(r => r.json())
       .then(renderLeaderboard)
@@ -165,9 +167,13 @@
       .catch(() => {});
   }
 
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   function renderLeaderboard(entries) {
     if (!entries.length) {
-      lbBody.innerHTML = '<tr><td colspan="6" class="lb-empty">No solves yet</td></tr>';
+      lbBody.innerHTML = '<tr><td colspan="7" class="lb-empty">No solves yet</td></tr>';
       lbFoot.innerHTML = '';
       return;
     }
@@ -175,8 +181,10 @@
     lbBody.innerHTML = entries.map((e, i) => {
       const d = new Date(e.date);
       const dateStr = `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      const name = e.nickname ? escapeHtml(e.nickname) : '<span class="lb-anon">anonymous</span>';
       return `<tr>
         <td>${i + 1}</td>
+        <td>${name}</td>
         <td>${formatTime(e.time)}</td>
         <td>${e.moves}</td>
         <td>${e.width}×${e.height}</td>
@@ -187,7 +195,7 @@
 
     const avg = Math.round(entries.reduce((sum, e) => sum + e.time, 0) / entries.length);
     lbFoot.innerHTML = `<tr class="lb-avg">
-      <td colspan="2">Avg (last ${entries.length})</td>
+      <td colspan="3">Avg (last ${entries.length})</td>
       <td colspan="4">${formatTime(avg)}</td>
     </tr>`;
   }
@@ -236,6 +244,12 @@
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
+  // ── Nickname ──────────────────────────────────────────────────────────────
+  cfgNickname.value = localStorage.getItem('mapRotatorNickname') || '';
+  cfgNickname.addEventListener('change', () => {
+    localStorage.setItem('mapRotatorNickname', cfgNickname.value.trim());
+  });
+
   newGameBtn.addEventListener('click', newGame);
   playAgainBtn.addEventListener('click', newGame);
 

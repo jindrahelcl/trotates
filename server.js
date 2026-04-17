@@ -102,9 +102,10 @@ function handlePostLeaderboard(req, res) {
   req.on('data', chunk => { body += chunk; });
   req.on('end', () => {
     try {
-      const { time, moves, width, height, zoom } = JSON.parse(body);
+      const { time, moves, width, height, zoom, nickname } = JSON.parse(body);
       if (typeof time !== 'number' || typeof moves !== 'number') throw new Error();
       const entry = {
+        nickname: String(nickname || '').trim().slice(0, 20) || 'anonymous',
         time:   Math.round(time),
         moves:  Math.round(moves),
         width:  Math.round(width)  || 4,
