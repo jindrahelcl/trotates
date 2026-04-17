@@ -157,7 +157,7 @@
     const img = cell.querySelector('img');
     img.style.transform = `rotate(${tile.rotation}deg)`;
 
-    checkWin();
+    setTimeout(checkWin, 270); // wait for 0.25s CSS rotation transition to finish
   }
 
   function checkWin() {
@@ -165,9 +165,29 @@
       stopTimer();
       const elapsed = elapsedSeconds();
       winStats.textContent = `${moves} move${moves !== 1 ? 's' : ''} · ${formatTime(elapsed)}`;
-      winOverlay.classList.remove('hidden');
       postSolve(elapsed);
+      triggerWinAnimation(() => winOverlay.classList.remove('hidden'));
     }
+  }
+
+  function triggerWinAnimation(onComplete) {
+    const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value) || 4));
+    const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
+    const cx = (cols - 1) / 2;
+    const cy = (rows - 1) / 2;
+    let maxDelay = 0;
+
+    grid.querySelectorAll('.tile').forEach((cell, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const dist = Math.sqrt((col - cx) ** 2 + (row - cy) ** 2);
+      const delay = Math.min(Math.round(dist * 60), 400);
+      maxDelay = Math.max(maxDelay, delay);
+      cell.style.animationDelay = delay + 'ms';
+      cell.classList.add('solved');
+    });
+
+    setTimeout(onComplete, maxDelay + 400);
   }
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
