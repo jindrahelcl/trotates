@@ -45,10 +45,11 @@
   let currentTile = { x: 0, y: 0 };
   let pendingTile = null;
 
-  // Hardcore mode state
+  // Nightmare mode state
   let nightmareMode = false;
   let correctPositions = [];
   let dragSrcIdx = null;
+  let suppressClick = false;  // blocks click handler after a drag-drop swap
   let touchDragSrc = null;
   let touchDragging = false;
   let touchStartX = 0, touchStartY = 0;
@@ -230,7 +231,10 @@
     const cell = e.target.closest('.tile');
     if (cell) {
       const dropIdx = parseInt(cell.dataset.idx);
-      if (dropIdx !== dragSrcIdx) swapTiles(dragSrcIdx, dropIdx);
+      if (dropIdx !== dragSrcIdx) {
+        swapTiles(dragSrcIdx, dropIdx);
+        suppressClick = true;  // drop target receives a click event after drop in some browsers
+      }
     }
     clearDragClasses();
     dragSrcIdx = null;
@@ -243,6 +247,7 @@
 
   // ── Click (rotate) ────────────────────────────────────────────────────────
   grid.addEventListener('click', e => {
+    if (suppressClick) { suppressClick = false; return; }
     const cell = e.target.closest('.tile');
     if (cell) rotateTile(parseInt(cell.dataset.idx));
   });
@@ -306,7 +311,10 @@
         const cell = el && el.closest('.tile');
         if (cell) {
           const dropIdx = parseInt(cell.dataset.idx);
-          if (dropIdx !== touchDragSrc.idx) swapTiles(touchDragSrc.idx, dropIdx);
+          if (dropIdx !== touchDragSrc.idx) {
+            swapTiles(touchDragSrc.idx, dropIdx);
+            suppressClick = true;
+          }
         }
       } else {
         rotateTile(touchDragSrc.idx);
@@ -509,6 +517,7 @@
     admiring = false;
     gameOver = false;
     dragSrcIdx = null;
+    suppressClick = false;
     touchDragSrc = null;
     touchDragging = false;
 
