@@ -158,12 +158,12 @@ main {
 
 @keyframes spin-settle {
   from { transform: rotate(0deg); }
-  to   { transform: rotate(1080deg); }
+  to   { transform: rotate(720deg); }
 }
 
 .tile.spinning img {
   transition: none !important;
-  animation: spin-settle 2.4s ease-out forwards;
+  animation: spin-settle 1.8s ease-out forwards;
 }
 
 @keyframes overlay-in {
