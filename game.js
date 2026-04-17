@@ -165,6 +165,7 @@
   }
 
   function checkWin() {
+    if (gameOver) return;
     if (tiles.every(t => t.rotation % 360 === 0)) {
       gameOver = true;
       stopTimer();
@@ -176,7 +177,7 @@
   }
 
   function triggerWinAnimation(onComplete) {
-    const EXTRA = 720; // 2 full clockwise spins
+    const EXTRA = 360; // 1 full clockwise spin
     const DURATION = 1800; // ms
 
     grid.querySelectorAll('.tile').forEach((cell, i) => {
