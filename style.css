@@ -131,15 +131,6 @@ main {
   z-index: 1;
 }
 
-@keyframes tile-solved {
-  0%   { transform: scale(1); box-shadow: none; }
-  40%  { transform: scale(1.12); box-shadow: 0 0 0 3px #4ecca3; }
-  100% { transform: scale(1); box-shadow: none; }
-}
-
-.tile.solved {
-  animation: tile-solved 0.38s ease both;
-}
 
 .tile img {
   width: 100%;

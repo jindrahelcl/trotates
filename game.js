@@ -41,6 +41,7 @@
   let startTime = null;
   let timerInterval = null;
   let admiring = false;
+  let gameOver = false;
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const cfgWidth    = document.getElementById('cfg-width');
@@ -147,7 +148,7 @@
   }, { passive: false });
 
   function rotateTile(idx) {
-    if (admiring) return;
+    if (admiring || gameOver) return;
     if (!startTime) startTimer();
 
     const tile = tiles[idx];
@@ -165,6 +166,7 @@
 
   function checkWin() {
     if (tiles.every(t => t.rotation % 360 === 0)) {
+      gameOver = true;
       stopTimer();
       const elapsed = elapsedSeconds();
       winStats.textContent = `${moves} move${moves !== 1 ? 's' : ''} · ${formatTime(elapsed)}`;
@@ -174,23 +176,29 @@
   }
 
   function triggerWinAnimation(onComplete) {
-    const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value) || 4));
-    const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
-    const cx = (cols - 1) / 2;
-    const cy = (rows - 1) / 2;
-    let maxDelay = 0;
+    const EXTRA = 1440; // 4 full clockwise spins
+    const DURATION = 1800; // ms
 
     grid.querySelectorAll('.tile').forEach((cell, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const dist = Math.sqrt((col - cx) ** 2 + (row - cy) ** 2);
-      const delay = Math.min(Math.round(dist * 60), 400);
-      maxDelay = Math.max(maxDelay, delay);
-      cell.style.animationDelay = delay + 'ms';
-      cell.classList.add('solved');
+      const img = cell.querySelector('img');
+      // Disable transition, set current rotation
+      img.style.transition = 'none';
+      img.style.transform = `rotate(${tiles[i].rotation}deg)`;
+      // Force reflow so the browser registers the starting position
+      img.getBoundingClientRect();
+      // Now animate forward with a strong ease-out deceleration
+      img.style.transition = `transform ${DURATION}ms cubic-bezier(0.12, 0.8, 0.2, 1)`;
+      img.style.transform = `rotate(${tiles[i].rotation + EXTRA}deg)`;
+      tiles[i].rotation += EXTRA;
     });
 
-    setTimeout(onComplete, maxDelay + 400);
+    setTimeout(() => {
+      // Restore the normal tile transition
+      grid.querySelectorAll('.tile img').forEach(img => {
+        img.style.transition = '';
+      });
+      onComplete();
+    }, DURATION + 50);
   }
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
@@ -285,6 +293,7 @@
     timerEl.textContent = '0:00';
     winOverlay.classList.add('hidden');
     admiring = false;
+    gameOver = false;
 
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
     const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
