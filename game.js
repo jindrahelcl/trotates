@@ -115,13 +115,35 @@
       img.style.transform = `rotate(${tile.rotation}deg)`;
       img.draggable = false;
 
+      cell.dataset.idx = idx;
       cell.appendChild(img);
-      cell.addEventListener('click', () => rotateTile(idx));
       grid.appendChild(cell);
     });
   }
 
   // ── Interaction ───────────────────────────────────────────────────────────
+
+  // Handle click (desktop) and touchstart (mobile, supports multi-touch)
+  grid.addEventListener('click', e => {
+    const cell = e.target.closest('.tile');
+    if (cell) rotateTile(parseInt(cell.dataset.idx));
+  });
+
+  grid.addEventListener('touchstart', e => {
+    e.preventDefault(); // prevent ghost click
+    const rotated = new Set();
+    for (const touch of e.changedTouches) {
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const cell = el && el.closest('.tile');
+      if (!cell) continue;
+      const idx = parseInt(cell.dataset.idx);
+      if (!rotated.has(idx)) {
+        rotated.add(idx);
+        rotateTile(idx);
+      }
+    }
+  }, { passive: false });
+
   function rotateTile(idx) {
     if (!startTime) startTimer();
 
