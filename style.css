@@ -244,6 +244,14 @@ main {
   font-style: italic;
 }
 
+@media (max-width: 520px) {
+  .lb-col-grid,
+  .lb-col-zoom,
+  .lb-col-date { display: none; }
+
+  #lb-table { min-width: unset; }
+}
+
 .lb-avg td {
   color: #4ecca3;
   font-weight: 600;

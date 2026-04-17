@@ -215,9 +215,9 @@
         <td>${name}</td>
         <td>${formatTime(e.time)}</td>
         <td>${e.moves}</td>
-        <td>${e.width}×${e.height}</td>
-        <td>${e.zoom}</td>
-        <td>${dateStr}</td>
+        <td class="lb-col-grid">${e.width}×${e.height}</td>
+        <td class="lb-col-zoom">${e.zoom}</td>
+        <td class="lb-col-date">${dateStr}</td>
       </tr>`;
     }).join('');
 
