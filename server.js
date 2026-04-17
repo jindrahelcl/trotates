@@ -77,12 +77,66 @@ function proxyTile(res, layer, z, x, y) {
   });
 }
 
+// ── Leaderboard ───────────────────────────────────────────────────────────
+const LB_FILE = path.join(__dirname, 'leaderboard.json');
+const LB_MAX_STORED = 100;
+const LB_DISPLAY    = 10;
+
+function readLeaderboard() {
+  try { return JSON.parse(fs.readFileSync(LB_FILE, 'utf8')); } catch { return []; }
+}
+
+function writeLeaderboard(entries) {
+  fs.writeFileSync(LB_FILE, JSON.stringify(entries, null, 2));
+}
+
+function handleGetLeaderboard(res) {
+  const entries = readLeaderboard();
+  const top = entries.slice(-LB_DISPLAY).reverse();
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(top));
+}
+
+function handlePostLeaderboard(req, res) {
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { time, moves, width, height, zoom } = JSON.parse(body);
+      if (typeof time !== 'number' || typeof moves !== 'number') throw new Error();
+      const entry = {
+        time:   Math.round(time),
+        moves:  Math.round(moves),
+        width:  Math.round(width)  || 4,
+        height: Math.round(height) || 4,
+        zoom:   Math.round(zoom)   || 15,
+        date:   new Date().toISOString(),
+      };
+      const entries = readLeaderboard();
+      entries.push(entry);
+      if (entries.length > LB_MAX_STORED) entries.splice(0, entries.length - LB_MAX_STORED);
+      writeLeaderboard(entries);
+      const top = entries.slice(-LB_DISPLAY).reverse();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(top));
+    } catch {
+      res.writeHead(400);
+      res.end('Bad request');
+    }
+  });
+}
+
 // ── Router ────────────────────────────────────────────────────────────────
 const TILE_RE = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
 const STATIC_FILES = new Set(['index.html', 'style.css', 'game.js']);
 
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
+
+  if (url === '/leaderboard') {
+    if (req.method === 'GET')  return handleGetLeaderboard(res);
+    if (req.method === 'POST') return handlePostLeaderboard(req, res);
+  }
 
   const tileMatch = url.match(TILE_RE);
   if (tileMatch) {

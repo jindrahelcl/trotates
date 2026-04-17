@@ -23,6 +23,19 @@
     <div id="grid"></div>
   </main>
 
+  <section id="leaderboard">
+    <h2>Last 10 Solves</h2>
+    <table id="lb-table">
+      <thead>
+        <tr><th>#</th><th>Time</th><th>Moves</th><th>Grid</th><th>Zoom</th><th>Date</th></tr>
+      </thead>
+      <tbody id="lb-body">
+        <tr><td colspan="6" class="lb-empty">No solves yet</td></tr>
+      </tbody>
+      <tfoot id="lb-foot"></tfoot>
+    </table>
+  </section>
+
   <div id="win-overlay" class="overlay hidden">
     <div class="overlay-box">
       <h2>Puzzle Solved!</h2>

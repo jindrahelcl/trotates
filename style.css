@@ -186,3 +186,55 @@ main {
   font-size: 1.05rem;
   color: #4ecca3;
 }
+
+/* Leaderboard */
+#leaderboard {
+  max-width: 640px;
+  margin: 0 auto 40px;
+  padding: 0 16px;
+}
+
+#leaderboard h2 {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #aaa;
+  margin-bottom: 12px;
+}
+
+#lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+#lb-table th {
+  text-align: left;
+  padding: 6px 10px;
+  color: #666;
+  border-bottom: 1px solid #0f3460;
+  font-weight: 600;
+}
+
+#lb-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #0f3460;
+  color: #ccc;
+}
+
+#lb-table tbody tr:hover td {
+  background: #16213e;
+}
+
+.lb-empty {
+  text-align: center;
+  color: #555;
+  padding: 20px !important;
+}
+
+.lb-avg td {
+  color: #4ecca3;
+  font-weight: 600;
+  border-bottom: none;
+  padding-top: 10px;
+}

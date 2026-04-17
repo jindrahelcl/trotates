@@ -137,7 +137,59 @@
       const elapsed = elapsedSeconds();
       winStats.textContent = `${moves} move${moves !== 1 ? 's' : ''} · ${formatTime(elapsed)}`;
       winOverlay.classList.remove('hidden');
+      postSolve(elapsed);
     }
+  }
+
+  // ── Leaderboard ───────────────────────────────────────────────────────────
+  const lbBody = document.getElementById('lb-body');
+  const lbFoot = document.getElementById('lb-foot');
+
+  function postSolve(time) {
+    const cols = Math.max(1, parseInt(cfgWidth.value)  || 4);
+    const rows = Math.max(1, parseInt(cfgHeight.value) || 4);
+    fetch('/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ time, moves, width: cols, height: rows, zoom: currentZoom }),
+    })
+      .then(r => r.json())
+      .then(renderLeaderboard)
+      .catch(() => {});
+  }
+
+  function fetchLeaderboard() {
+    fetch('/leaderboard')
+      .then(r => r.json())
+      .then(renderLeaderboard)
+      .catch(() => {});
+  }
+
+  function renderLeaderboard(entries) {
+    if (!entries.length) {
+      lbBody.innerHTML = '<tr><td colspan="6" class="lb-empty">No solves yet</td></tr>';
+      lbFoot.innerHTML = '';
+      return;
+    }
+
+    lbBody.innerHTML = entries.map((e, i) => {
+      const d = new Date(e.date);
+      const dateStr = `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      return `<tr>
+        <td>${i + 1}</td>
+        <td>${formatTime(e.time)}</td>
+        <td>${e.moves}</td>
+        <td>${e.width}×${e.height}</td>
+        <td>${e.zoom}</td>
+        <td>${dateStr}</td>
+      </tr>`;
+    }).join('');
+
+    const avg = Math.round(entries.reduce((sum, e) => sum + e.time, 0) / entries.length);
+    lbFoot.innerHTML = `<tr class="lb-avg">
+      <td colspan="2">Avg (last ${entries.length})</td>
+      <td colspan="4">${formatTime(avg)}</td>
+    </tr>`;
   }
 
   // ── Timer ─────────────────────────────────────────────────────────────────
@@ -188,4 +240,5 @@
   playAgainBtn.addEventListener('click', newGame);
 
   newGame();
+  fetchLeaderboard();
 })();
