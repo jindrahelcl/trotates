@@ -215,7 +215,9 @@
     imgA.style.transform = `rotate(${tiles[a].rotation}deg)`;
     imgB.src = tileUrl(tiles[b].x, tiles[b].y, currentZoom);
     imgB.style.transform = `rotate(${tiles[b].rotation}deg)`;
-    requestAnimationFrame(() => { imgA.style.transition = ''; imgB.style.transition = ''; });
+    void imgA.offsetWidth; // force reflow — commits transform change before re-enabling transition
+    imgA.style.transition = '';
+    imgB.style.transition = '';
 
     moves++;
     movesEl.textContent = `Moves: ${moves}`;
