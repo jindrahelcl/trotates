@@ -228,8 +228,15 @@
   }
 
   // ── Desktop drag (nightmare mode) — custom ghost, no HTML5 DnD ──────────
+  function cancelDrag() {
+    clearDrag();
+    dragSrcIdx = null;
+    isDragging = false;
+    touchDragSrc = null;
+  }
+
   grid.addEventListener('mousedown', e => {
-    if (!nightmareMode || admiring || gameOver) return;
+    if (e.button !== 0 || !nightmareMode || admiring || gameOver) return;
     const cell = e.target.closest('.tile');
     if (!cell) return;
     e.preventDefault();
@@ -241,6 +248,8 @@
 
   document.addEventListener('mousemove', e => {
     if (!nightmareMode || dragSrcIdx === null) return;
+    // Mouse button released outside the window
+    if (e.buttons === 0) { cancelDrag(); return; }
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
     if (!isDragging && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
@@ -274,6 +283,12 @@
     dragSrcIdx = null;
     isDragging = false;
   });
+
+  // Cancel drag on any interruption
+  document.addEventListener('contextmenu', () => { if (dragSrcIdx !== null) cancelDrag(); });
+  window.addEventListener('blur', cancelDrag);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') cancelDrag(); });
+  grid.addEventListener('touchcancel', cancelDrag);
 
   // ── Click (rotate) ────────────────────────────────────────────────────────
   grid.addEventListener('click', e => {
