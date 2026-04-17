@@ -14,7 +14,7 @@ function loadEnv(filePath) {
       if (eq === -1) continue;
       const key = trimmed.slice(0, eq).trim();
       const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
-      process.env[key] = process.env[key] ?? val;
+      if (process.env[key] === undefined) process.env[key] = val;
     }
   } catch {
     // .env is optional if vars are already in environment
