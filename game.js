@@ -182,7 +182,7 @@
 
   function triggerWinAnimation(onComplete) {
     const SPINS = 2;
-    const DURATION = 1800; // ms
+    const DURATION = 1000; // ms
 
     grid.querySelectorAll('.tile').forEach(cell => cell.classList.add('spinning'));
     tiles.forEach(t => { t.rotation = SPINS * 360; });
