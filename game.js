@@ -40,6 +40,7 @@
   let moves = 0;
   let startTime = null;
   let timerInterval = null;
+  let admiring = false;
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const cfgWidth    = document.getElementById('cfg-width');
@@ -51,8 +52,9 @@
   const timerEl    = document.getElementById('timer');
   const movesEl    = document.getElementById('moves');
   const newGameBtn = document.getElementById('new-game-btn');
-  const winOverlay = document.getElementById('win-overlay');
-  const winStats   = document.getElementById('win-stats');
+  const winOverlay  = document.getElementById('win-overlay');
+  const winStats    = document.getElementById('win-stats');
+  const admireBtn   = document.getElementById('admire-btn');
   const playAgainBtn = document.getElementById('play-again-btn');
 
   // ── Tile math (Web Mercator) ──────────────────────────────────────────────
@@ -145,6 +147,7 @@
   }, { passive: false });
 
   function rotateTile(idx) {
+    if (admiring) return;
     if (!startTime) startTimer();
 
     const tile = tiles[idx];
@@ -281,6 +284,7 @@
     movesEl.textContent = 'Moves: 0';
     timerEl.textContent = '0:00';
     winOverlay.classList.add('hidden');
+    admiring = false;
 
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
     const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
@@ -300,6 +304,10 @@
 
   newGameBtn.addEventListener('click', newGame);
   playAgainBtn.addEventListener('click', newGame);
+  admireBtn.addEventListener('click', () => {
+    admiring = true;
+    winOverlay.classList.add('hidden');
+  });
   window.addEventListener('resize', () => {
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value) || 4));
     render(cols);

@@ -196,12 +196,25 @@ main {
   line-height: 1.5;
 }
 
-.overlay-box button {
-  background: #e94560;
-  color: #fff;
-  width: 100%;
+.win-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.win-buttons button {
+  flex: 1;
   padding: 12px;
   font-size: 1rem;
+}
+
+#admire-btn {
+  background: #0f3460;
+  color: #eee;
+}
+
+#play-again-btn {
+  background: #e94560;
+  color: #fff;
 }
 
 #win-stats {
