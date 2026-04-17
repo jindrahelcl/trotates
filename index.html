@@ -25,16 +25,31 @@
   </main>
 
   <section id="leaderboard">
-    <h2>Last 10 Solves</h2>
-    <table id="lb-table">
-      <thead>
-        <tr><th>#</th><th>Player</th><th>Time</th><th>Moves</th><th class="lb-col-grid">Grid</th><th class="lb-col-zoom">Zoom</th><th class="lb-col-date">Date</th></tr>
-      </thead>
-      <tbody id="lb-body">
-        <tr><td colspan="7" class="lb-empty">No solves yet</td></tr>
-      </tbody>
-      <tfoot id="lb-foot"></tfoot>
-    </table>
+    <div class="lb-tabs">
+      <button class="lb-tab active" data-tab="location">This Location</button>
+      <button class="lb-tab" data-tab="global">Global</button>
+    </div>
+    <div id="lb-location" class="lb-panel">
+      <table id="lb-table">
+        <thead>
+          <tr><th>#</th><th>Player</th><th>Time</th><th>Moves</th><th class="lb-col-date">Date</th></tr>
+        </thead>
+        <tbody id="lb-body">
+          <tr><td colspan="5" class="lb-empty">No solves yet for this location</td></tr>
+        </tbody>
+        <tfoot id="lb-foot"></tfoot>
+      </table>
+    </div>
+    <div id="lb-global" class="lb-panel hidden">
+      <table id="lb-global-table">
+        <thead>
+          <tr><th>#</th><th>Player</th><th>Wins</th></tr>
+        </thead>
+        <tbody id="lb-global-body">
+          <tr><td colspan="3" class="lb-empty">No wins yet</td></tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <div id="win-overlay" class="overlay hidden">
@@ -42,6 +57,12 @@
       <h2>Puzzle Solved!</h2>
       <p id="win-stats"></p>
       <a id="mapy-link" href="#" target="_blank" class="mapy-link">View on mapy.com</a>
+      <button id="share-btn" class="share-btn">Copy challenge link</button>
+      <div id="anon-prompt" class="anon-prompt hidden">
+        Playing as anonymous —
+        <input type="text" id="anon-name" placeholder="your name" maxlength="20" autocomplete="off">
+        <button id="anon-save-btn">Save</button>
+      </div>
       <div class="win-buttons">
         <button id="admire-btn">Admire</button>
         <button id="play-again-btn">Play Again</button>

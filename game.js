@@ -42,6 +42,9 @@
   let timerInterval = null;
   let admiring = false;
   let gameOver = false;
+  let currentLocKey = '';
+  let currentTile = { x: 0, y: 0 };
+  let pendingTile = null; // {tx, ty} set when loading from a short URL
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const cfgWidth    = document.getElementById('cfg-width');
@@ -49,14 +52,18 @@
   const cfgZoom     = document.getElementById('cfg-zoom');
   const cfgNickname = document.getElementById('cfg-nickname');
 
-  const grid       = document.getElementById('grid');
-  const timerEl    = document.getElementById('timer');
-  const movesEl    = document.getElementById('moves');
-  const newGameBtn = document.getElementById('new-game-btn');
+  const grid        = document.getElementById('grid');
+  const timerEl     = document.getElementById('timer');
+  const movesEl     = document.getElementById('moves');
+  const newGameBtn  = document.getElementById('new-game-btn');
   const winOverlay  = document.getElementById('win-overlay');
   const winStats    = document.getElementById('win-stats');
   const admireBtn   = document.getElementById('admire-btn');
   const playAgainBtn = document.getElementById('play-again-btn');
+  const shareBtn    = document.getElementById('share-btn');
+  const anonPrompt  = document.getElementById('anon-prompt');
+  const anonName    = document.getElementById('anon-name');
+  const anonSaveBtn = document.getElementById('anon-save-btn');
 
   // ── Tile math (Web Mercator) ──────────────────────────────────────────────
   function latLngToTile(lat, lng, z) {
@@ -67,16 +74,35 @@
     return { x, y };
   }
 
+  function tileToLatLng(x, y, z) {
+    const n = Math.pow(2, z);
+    const lng = (x + 0.5) / n * 360 - 180;
+    const latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 0.5) / n)));
+    return { lat: latRad * 180 / Math.PI, lng };
+  }
+
   function tileUrl(x, y, z) {
     return `/tiles/outdoor/${z}/${x}/${y}`;
   }
 
   // ── Game state ────────────────────────────────────────────────────────────
   let currentLoc = { lat: 0, lng: 0 };
+  let currentZoom = 15;
 
   function buildTileSet(cols, rows, zoom) {
-    currentLoc = randomLocation();
-    const center = latLngToTile(currentLoc.lat, currentLoc.lng, zoom);
+    let center;
+    if (pendingTile) {
+      center = { x: pendingTile.tx, y: pendingTile.ty };
+      pendingTile = null;
+    } else {
+      const raw = randomLocation();
+      center = latLngToTile(raw.lat, raw.lng, zoom);
+    }
+    // Snap currentLoc to tile center so same tile always produces the same key
+    currentLoc = tileToLatLng(center.x, center.y, zoom);
+    currentTile = center;
+    currentLocKey = `${center.x},${center.y},${zoom},${cols},${rows}`;
+
     const halfX = Math.floor(cols / 2);
     const halfY = Math.floor(rows / 2);
     const result = [];
@@ -127,15 +153,13 @@
   }
 
   // ── Interaction ───────────────────────────────────────────────────────────
-
-  // Handle click (desktop) and touchstart (mobile, supports multi-touch)
   grid.addEventListener('click', e => {
     const cell = e.target.closest('.tile');
     if (cell) rotateTile(parseInt(cell.dataset.idx));
   });
 
   grid.addEventListener('touchstart', e => {
-    e.preventDefault(); // prevent ghost click
+    e.preventDefault();
     const rotated = new Set();
     for (const touch of e.changedTouches) {
       const el = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -163,7 +187,7 @@
     const img = cell.querySelector('img');
     img.style.transform = `rotate(${tile.rotation}deg)`;
 
-    setTimeout(checkWin, 270); // wait for 0.25s CSS rotation transition to finish
+    setTimeout(checkWin, 270);
   }
 
   function checkWin() {
@@ -174,15 +198,16 @@
       const elapsed = elapsedSeconds();
       winStats.textContent = `${moves} move${moves !== 1 ? 's' : ''} · ${formatTime(elapsed)}`;
       postSolve(elapsed);
-      const mapUrl = `https://mapy.com/?x=${currentLoc.lng.toFixed(5)}&y=${currentLoc.lat.toFixed(5)}&z=${currentZoom}`;
+      const mapUrl = `https://mapy.com/fnc/v1/showmap?mapset=outdoor&center=${currentLoc.lng.toFixed(5)},${currentLoc.lat.toFixed(5)}&zoom=${currentZoom}&marker=true`;
       document.getElementById('mapy-link').href = mapUrl;
+      if (!cfgNickname.value.trim()) anonPrompt.classList.remove('hidden');
       triggerWinAnimation(() => winOverlay.classList.remove('hidden'));
     }
   }
 
   function triggerWinAnimation(onComplete) {
     const SPINS = 1;
-    const DURATION = 1000; // ms
+    const DURATION = 1000;
 
     grid.querySelectorAll('.tile').forEach(cell => cell.classList.add('spinning'));
     tiles.forEach(t => { t.rotation = SPINS * 360; });
@@ -197,8 +222,9 @@
   }
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
-  const lbBody = document.getElementById('lb-body');
-  const lbFoot = document.getElementById('lb-foot');
+  const lbBody       = document.getElementById('lb-body');
+  const lbFoot       = document.getElementById('lb-foot');
+  const lbGlobalBody = document.getElementById('lb-global-body');
 
   function postSolve(time) {
     const cols = Math.max(1, parseInt(cfgWidth.value)  || 4);
@@ -207,17 +233,24 @@
     fetch('/leaderboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ time, moves, width: cols, height: rows, zoom: currentZoom, nickname }),
+      body: JSON.stringify({ time, moves, width: cols, height: rows, zoom: currentZoom, nickname, loc: currentLocKey }),
     })
+      .then(r => r.json())
+      .then(data => { renderLeaderboard(data); fetchGlobal(); })
+      .catch(() => {});
+  }
+
+  function fetchLeaderboard(loc) {
+    fetch('/leaderboard?loc=' + encodeURIComponent(loc))
       .then(r => r.json())
       .then(renderLeaderboard)
       .catch(() => {});
   }
 
-  function fetchLeaderboard() {
-    fetch('/leaderboard')
+  function fetchGlobal() {
+    fetch('/leaderboard/global')
       .then(r => r.json())
-      .then(renderLeaderboard)
+      .then(renderGlobal)
       .catch(() => {});
   }
 
@@ -225,14 +258,15 @@
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function renderLeaderboard(entries) {
-    if (!entries.length) {
-      lbBody.innerHTML = '<tr><td colspan="7" class="lb-empty">No solves yet</td></tr>';
+  function renderLeaderboard(data) {
+    const solves = data.solves || [];
+    const avg = data.avg || 0;
+    if (!solves.length) {
+      lbBody.innerHTML = '<tr><td colspan="5" class="lb-empty">No solves yet for this location</td></tr>';
       lbFoot.innerHTML = '';
       return;
     }
-
-    lbBody.innerHTML = entries.map((e, i) => {
+    lbBody.innerHTML = solves.map((e, i) => {
       const d = new Date(e.date);
       const dateStr = `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
       const name = e.nickname ? escapeHtml(e.nickname) : '<span class="lb-anon">anonymous</span>';
@@ -241,18 +275,59 @@
         <td>${name}</td>
         <td>${formatTime(e.time)}</td>
         <td>${e.moves}</td>
-        <td class="lb-col-grid">${e.width}×${e.height}</td>
-        <td class="lb-col-zoom">${e.zoom}</td>
         <td class="lb-col-date">${dateStr}</td>
       </tr>`;
     }).join('');
-
-    const avg = Math.round(entries.reduce((sum, e) => sum + e.time, 0) / entries.length);
     lbFoot.innerHTML = `<tr class="lb-avg">
-      <td colspan="3">Avg (last ${entries.length})</td>
-      <td colspan="4">${formatTime(avg)}</td>
+      <td colspan="3">Avg (${solves.length})</td>
+      <td colspan="2">${formatTime(avg)}</td>
     </tr>`;
   }
+
+  function renderGlobal(list) {
+    if (!list.length) {
+      lbGlobalBody.innerHTML = '<tr><td colspan="3" class="lb-empty">No wins yet</td></tr>';
+      return;
+    }
+    lbGlobalBody.innerHTML = list.map((e, i) => {
+      const name = e.nickname ? escapeHtml(e.nickname) : '<span class="lb-anon">anonymous</span>';
+      return `<tr><td>${i + 1}</td><td>${name}</td><td>${e.wins}</td></tr>`;
+    }).join('');
+  }
+
+  // Tab switching
+  document.querySelectorAll('.lb-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.lb-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('lb-location').classList.toggle('hidden', tab !== 'location');
+      document.getElementById('lb-global').classList.toggle('hidden', tab !== 'global');
+    });
+  });
+
+  // Share button
+  shareBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => {
+        shareBtn.textContent = 'Copied!';
+        setTimeout(() => { shareBtn.textContent = 'Copy challenge link'; }, 2000);
+      })
+      .catch(() => {
+        shareBtn.textContent = 'Copy failed';
+        setTimeout(() => { shareBtn.textContent = 'Copy challenge link'; }, 2000);
+      });
+  });
+
+  // Nickname prompt
+  anonSaveBtn.addEventListener('click', () => {
+    const name = anonName.value.trim().slice(0, 20);
+    if (name) {
+      cfgNickname.value = name;
+      localStorage.setItem('mapRotatorNickname', name);
+    }
+    anonPrompt.classList.add('hidden');
+  });
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   function startTimer() {
@@ -278,8 +353,6 @@
   }
 
   // ── New game ──────────────────────────────────────────────────────────────
-  let currentZoom = 15;
-
   function newGame() {
     stopTimer();
     startTime = null;
@@ -287,20 +360,33 @@
     movesEl.textContent = 'Moves: 0';
     timerEl.textContent = '0:00';
     winOverlay.classList.add('hidden');
+    anonPrompt.classList.add('hidden');
     admiring = false;
     gameOver = false;
 
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
     const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
-    currentZoom  = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
+    currentZoom = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
 
     tiles = buildTileSet(cols, rows, currentZoom);
     scramble(tiles);
     render(cols);
+
+    // Register short URL for this puzzle
+    fetch('/shorten', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tx: currentTile.x, ty: currentTile.y, z: currentZoom, w: cols, h: rows }),
+    })
+      .then(r => r.json())
+      .then(({ code }) => { history.replaceState(null, '', '/s/' + code); })
+      .catch(() => {});
+
+    fetchLeaderboard(currentLocKey);
+    fetchGlobal();
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
-  // ── Nickname ──────────────────────────────────────────────────────────────
   cfgNickname.value = localStorage.getItem('mapRotatorNickname') || '';
   cfgNickname.addEventListener('change', () => {
     localStorage.setItem('mapRotatorNickname', cfgNickname.value.trim());
@@ -317,6 +403,24 @@
     render(cols);
   });
 
-  newGame();
-  fetchLeaderboard();
+  // Resolve short URL on page load (path /s/CODE or legacy ?s=CODE)
+  const pathMatch = window.location.pathname.match(/^\/s\/([a-z]{10})$/);
+  const shortCode = pathMatch ? pathMatch[1] : null;
+
+  if (shortCode) {
+    fetch('/resolve/' + shortCode)
+      .then(r => r.json())
+      .then(data => {
+        if (typeof data.tx === 'number') {
+          cfgWidth.value  = data.w;
+          cfgHeight.value = data.h;
+          cfgZoom.value   = data.z;
+          pendingTile = { tx: data.tx, ty: data.ty };
+        }
+        newGame();
+      })
+      .catch(() => newGame());
+  } else {
+    newGame();
+  }
 })();

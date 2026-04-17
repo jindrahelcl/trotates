@@ -53,11 +53,11 @@ function serveStatic(res, filePath) {
 }
 
 // ── Limits ────────────────────────────────────────────────────────────────
-const MAX_GRID      = 20;  // max tiles per side
-const RATE_WINDOW   = 60 * 1000;  // 1 minute
-const RATE_MAX      = 500; // max tile requests per IP per minute (20×20=400 per game)
+const MAX_GRID    = 20;
+const RATE_WINDOW = 60 * 1000;
+const RATE_MAX    = 500;
 
-const rateCounts = new Map(); // ip → [timestamp, ...]
+const rateCounts = new Map();
 
 function isRateLimited(ip) {
   const now = Date.now();
@@ -68,7 +68,6 @@ function isRateLimited(ip) {
   return false;
 }
 
-// Clean up rate map every minute to avoid unbounded growth
 setInterval(() => {
   const now = Date.now();
   for (const [ip, times] of rateCounts) {
@@ -79,8 +78,6 @@ setInterval(() => {
 }, RATE_WINDOW);
 
 // ── Tile proxy ────────────────────────────────────────────────────────────
-// Browser requests: GET /tiles/{layer}/{z}/{x}/{y}
-// Proxied to:       https://api.mapy.com/v1/maptiles/{layer}/256/{z}/{x}/{y}?apikey=...
 function proxyTile(req, res, layer, z, x, y) {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
   if (isRateLimited(ip)) {
@@ -110,24 +107,120 @@ function proxyTile(req, res, layer, z, x, y) {
   });
 }
 
+// ── Short URLs ────────────────────────────────────────────────────────────
+// shorts.json: { "bafocemidu": {tx,ty,z,w,h}, "_rev": {"tx,ty,z,w,h": "code"} }
+const SHORTS_FILE = path.join(__dirname, 'shorts.json');
+const CONSONANTS  = 'bcdfghjklmnprstvz'; // 17
+const VOWELS      = 'aeou';              // 4
+
+function generateCode() {
+  let s = '';
+  for (let i = 0; i < 10; i++)
+    s += i % 2 === 0
+      ? CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)]
+      : VOWELS[Math.floor(Math.random() * VOWELS.length)];
+  return s;
+}
+
+function readShorts() {
+  try { return JSON.parse(fs.readFileSync(SHORTS_FILE, 'utf8')); }
+  catch { return { _rev: {} }; }
+}
+
+function writeShorts(data) {
+  fs.writeFileSync(SHORTS_FILE, JSON.stringify(data, null, 2));
+}
+
+function handleShorten(req, res) {
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const parsed = JSON.parse(body);
+      const tx = Math.round(Number(parsed.tx));
+      const ty = Math.round(Number(parsed.ty));
+      const z  = Math.round(Number(parsed.z));
+      const w  = Math.round(Number(parsed.w));
+      const h  = Math.round(Number(parsed.h));
+      if (!isFinite(tx) || !isFinite(ty)) throw new Error('bad coords');
+      const revKey = `${tx},${ty},${z},${w},${h}`;
+      const shorts = readShorts();
+      if (shorts._rev[revKey]) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: shorts._rev[revKey] }));
+        return;
+      }
+      let code;
+      let attempts = 0;
+      do {
+        code = generateCode();
+        if (++attempts > 1000) throw new Error('code space exhausted');
+      } while (shorts[code]);
+      shorts[code] = { tx, ty, z, w, h };
+      shorts._rev[revKey] = code;
+      writeShorts(shorts);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ code }));
+    } catch {
+      res.writeHead(400);
+      res.end('Bad request');
+    }
+  });
+}
+
+function handleResolve(res, code) {
+  const shorts = readShorts();
+  const entry = shorts[code];
+  if (!entry || typeof entry !== 'object') {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not found' }));
+    return;
+  }
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(entry));
+}
+
 // ── Leaderboard ───────────────────────────────────────────────────────────
-const LB_FILE = path.join(__dirname, 'leaderboard.json');
-const LB_MAX_STORED = 100;
-const LB_DISPLAY    = 10;
+// leaderboard.json: { locations: { "tx,ty,z,w,h": [...entries] }, wins: { name: count } }
+const LB_FILE        = path.join(__dirname, 'leaderboard.json');
+const LB_MAX_PER_LOC = 100;
+const LB_DISPLAY     = 10;
+const GLOBAL_DISPLAY = 20;
 
 function readLeaderboard() {
-  try { return JSON.parse(fs.readFileSync(LB_FILE, 'utf8')); } catch { return []; }
+  try {
+    const data = JSON.parse(fs.readFileSync(LB_FILE, 'utf8'));
+    if (Array.isArray(data)) return { locations: {}, wins: {} }; // old format
+    return { locations: data.locations || {}, wins: data.wins || {} };
+  } catch {
+    return { locations: {}, wins: {} };
+  }
 }
 
-function writeLeaderboard(entries) {
-  fs.writeFileSync(LB_FILE, JSON.stringify(entries, null, 2));
+function writeLeaderboard(data) {
+  fs.writeFileSync(LB_FILE, JSON.stringify(data, null, 2));
 }
 
-function handleGetLeaderboard(res) {
-  const entries = readLeaderboard();
-  const top = entries.slice(-LB_DISPLAY).reverse();
+function handleGetLeaderboard(query, res) {
+  const params = new URLSearchParams(query);
+  const loc = params.get('loc') || '';
+  const data = readLeaderboard();
+  const entries = (data.locations[loc] || []).slice(0, LB_DISPLAY);
+  const avg = entries.length
+    ? Math.round(entries.reduce((s, e) => s + e.time, 0) / entries.length)
+    : 0;
   res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(top));
+  res.end(JSON.stringify({ solves: entries, avg }));
+}
+
+function handleGetGlobal(res) {
+  const data = readLeaderboard();
+  const list = Object.keys(data.wins || {})
+    .map(nickname => ({ nickname, wins: data.wins[nickname] }))
+    .sort((a, b) => b.wins - a.wins)
+    .slice(0, GLOBAL_DISPLAY);
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(list));
 }
 
 function handlePostLeaderboard(req, res) {
@@ -135,24 +228,31 @@ function handlePostLeaderboard(req, res) {
   req.on('data', chunk => { body += chunk; });
   req.on('end', () => {
     try {
-      const { time, moves, width, height, zoom, nickname } = JSON.parse(body);
+      const parsed = JSON.parse(body);
+      const { time, moves, nickname, loc } = parsed;
       if (typeof time !== 'number' || typeof moves !== 'number') throw new Error();
       const entry = {
         nickname: String(nickname || '').trim().slice(0, 20) || 'anonymous',
-        time:   Math.round(time),
-        moves:  Math.round(moves),
-        width:  Math.round(width)  || 4,
-        height: Math.round(height) || 4,
-        zoom:   Math.round(zoom)   || 15,
-        date:   new Date().toISOString(),
+        time:  Math.round(time),
+        moves: Math.round(moves),
+        date:  new Date().toISOString(),
       };
-      const entries = readLeaderboard();
-      entries.push(entry);
-      if (entries.length > LB_MAX_STORED) entries.splice(0, entries.length - LB_MAX_STORED);
-      writeLeaderboard(entries);
-      const top = entries.slice(-LB_DISPLAY).reverse();
+      const locKey = String(loc || '');
+      const data = readLeaderboard();
+      if (!data.locations[locKey]) data.locations[locKey] = [];
+      data.locations[locKey].push(entry);
+      data.locations[locKey].sort((a, b) => a.time - b.time);
+      if (data.locations[locKey].length > LB_MAX_PER_LOC) {
+        data.locations[locKey].length = LB_MAX_PER_LOC;
+      }
+      data.wins[entry.nickname] = (data.wins[entry.nickname] || 0) + 1;
+      writeLeaderboard(data);
+      const top = data.locations[locKey].slice(0, LB_DISPLAY);
+      const avg = top.length
+        ? Math.round(top.reduce((s, e) => s + e.time, 0) / top.length)
+        : 0;
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(top));
+      res.end(JSON.stringify({ solves: top, avg }));
     } catch {
       res.writeHead(400);
       res.end('Bad request');
@@ -161,15 +261,40 @@ function handlePostLeaderboard(req, res) {
 }
 
 // ── Router ────────────────────────────────────────────────────────────────
-const TILE_RE = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
+const TILE_RE    = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
+const SHORT_RE   = /^\/s\/([a-z]{10})$/;  // page route — serves index.html
+const RESOLVE_RE = /^\/resolve\/([a-z]{10})$/;  // JSON API — returns tile coords
 const STATIC_FILES = new Set(['index.html', 'style.css', 'game.js']);
 
 const server = http.createServer((req, res) => {
-  const url = req.url.split('?')[0];
+  const qIdx  = req.url.indexOf('?');
+  const url   = qIdx === -1 ? req.url : req.url.slice(0, qIdx);
+  const query = qIdx === -1 ? ''      : req.url.slice(qIdx + 1);
 
   if (url === '/leaderboard') {
-    if (req.method === 'GET')  return handleGetLeaderboard(res);
+    if (req.method === 'GET')  return handleGetLeaderboard(query, res);
     if (req.method === 'POST') return handlePostLeaderboard(req, res);
+  }
+
+  if (url === '/leaderboard/global' && req.method === 'GET') {
+    return handleGetGlobal(res);
+  }
+
+  if (url === '/shorten' && req.method === 'POST') {
+    return handleShorten(req, res);
+  }
+
+  // /resolve/CODE — JSON data endpoint (called by client JS)
+  const resolveMatch = url.match(RESOLVE_RE);
+  if (resolveMatch && req.method === 'GET') {
+    return handleResolve(res, resolveMatch[1]);
+  }
+
+  // /s/CODE — share page (serve index.html; JS reads location.pathname)
+  const shortMatch = url.match(SHORT_RE);
+  if (shortMatch && req.method === 'GET') {
+    serveStatic(res, path.join(__dirname, 'index.html'));
+    return;
   }
 
   const tileMatch = url.match(TILE_RE);

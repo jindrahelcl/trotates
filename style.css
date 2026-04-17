@@ -235,6 +235,53 @@ main {
   color: #4ecca3;
 }
 
+/* Share button */
+.share-btn {
+  width: 100%;
+  background: #0f3460;
+  color: #eee;
+  margin-bottom: 12px;
+  padding: 10px;
+  font-size: 0.9rem;
+}
+
+/* Nickname prompt */
+.anon-prompt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 14px;
+}
+
+.anon-prompt.hidden {
+  display: none;
+}
+
+.anon-prompt input {
+  width: 100px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #eee;
+  font-size: 0.8rem;
+}
+
+.anon-prompt input:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.anon-prompt button {
+  padding: 4px 10px;
+  background: #0f3460;
+  color: #eee;
+  font-size: 0.78rem;
+}
+
 /* Leaderboard */
 #leaderboard {
   max-width: 640px;
@@ -243,22 +290,53 @@ main {
   overflow-x: auto;
 }
 
-#leaderboard h2 {
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #aaa;
+/* Tabs */
+.lb-tabs {
+  display: flex;
+  border-bottom: 1px solid #0f3460;
   margin-bottom: 10px;
 }
 
-#lb-table {
+.lb-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: #555;
+  padding: 6px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.lb-tab:hover {
+  opacity: 1;
+  color: #aaa;
+}
+
+.lb-tab.active {
+  color: #e94560;
+  border-bottom-color: #e94560;
+}
+
+.lb-panel.hidden {
+  display: none;
+}
+
+#lb-table,
+#lb-global-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
-  min-width: 400px;
 }
 
-#lb-table th {
+#lb-table { min-width: 320px; }
+#lb-global-table { min-width: 200px; }
+
+#lb-table th,
+#lb-global-table th {
   text-align: left;
   padding: 6px 8px;
   color: #666;
@@ -267,14 +345,16 @@ main {
   white-space: nowrap;
 }
 
-#lb-table td {
+#lb-table td,
+#lb-global-table td {
   padding: 6px 8px;
   border-bottom: 1px solid #0f3460;
   color: #ccc;
   white-space: nowrap;
 }
 
-#lb-table tbody tr:hover td {
+#lb-table tbody tr:hover td,
+#lb-global-table tbody tr:hover td {
   background: #16213e;
 }
 
@@ -290,11 +370,10 @@ main {
 }
 
 @media (max-width: 520px) {
-  .lb-col-grid,
-  .lb-col-zoom,
   .lb-col-date { display: none; }
 
-  #lb-table { min-width: unset; }
+  #lb-table,
+  #lb-global-table { min-width: unset; }
 }
 
 .lb-avg td {
