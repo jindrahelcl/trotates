@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Rotator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Map Rotator</h1>
+    <div class="controls">
+      <label>W <input type="number" id="cfg-width" value="4" min="1" max="10"></label>
+      <label>H <input type="number" id="cfg-height" value="4" min="1" max="10"></label>
+      <label>Zoom <input type="number" id="cfg-zoom" value="15" min="5" max="19"></label>
+      <span id="timer">0:00</span>
+      <span id="moves">Moves: 0</span>
+      <button id="new-game-btn">New Game</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="grid"></div>
+  </main>
+
+  <div id="win-overlay" class="overlay hidden">
+    <div class="overlay-box">
+      <h2>Puzzle Solved!</h2>
+      <p id="win-stats"></p>
+      <button id="play-again-btn">Play Again</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
