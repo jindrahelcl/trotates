@@ -120,7 +120,7 @@
     if (!startTime) startTimer();
 
     const tile = tiles[idx];
-    tile.rotation = (tile.rotation + 90) % 360;
+    tile.rotation = tile.rotation + 90;
     moves++;
     movesEl.textContent = `Moves: ${moves}`;
 
@@ -133,7 +133,7 @@
   }
 
   function checkWin() {
-    if (tiles.every(t => t.rotation === 0)) {
+    if (tiles.every(t => t.rotation % 360 === 0)) {
       stopTimer();
       const elapsed = elapsedSeconds();
       winStats.textContent = `${moves} move${moves !== 1 ? 's' : ''} · ${formatTime(elapsed)}`;
