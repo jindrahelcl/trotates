@@ -72,9 +72,11 @@
   }
 
   // ── Game state ────────────────────────────────────────────────────────────
+  let currentLoc = { lat: 0, lng: 0 };
+
   function buildTileSet(cols, rows, zoom) {
-    const loc = randomLocation();
-    const center = latLngToTile(loc.lat, loc.lng, zoom);
+    currentLoc = randomLocation();
+    const center = latLngToTile(currentLoc.lat, currentLoc.lng, zoom);
     const halfX = Math.floor(cols / 2);
     const halfY = Math.floor(rows / 2);
     const result = [];
@@ -172,6 +174,8 @@
       const elapsed = elapsedSeconds();
       winStats.textContent = `${moves} move${moves !== 1 ? 's' : ''} · ${formatTime(elapsed)}`;
       postSolve(elapsed);
+      const mapUrl = `https://mapy.com/?x=${currentLoc.lng.toFixed(5)}&y=${currentLoc.lat.toFixed(5)}&z=${currentZoom}`;
+      document.getElementById('mapy-link').href = mapUrl;
       triggerWinAnimation(() => winOverlay.classList.remove('hidden'));
     }
   }
