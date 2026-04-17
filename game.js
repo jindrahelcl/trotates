@@ -46,7 +46,7 @@
   let pendingTile = null;
 
   // Hardcore mode state
-  let hardcoreMode = false;
+  let nightmareMode = false;
   let correctPositions = [];
   let dragSrcIdx = null;
   let touchDragSrc = null;
@@ -59,7 +59,7 @@
   const cfgHeight   = document.getElementById('cfg-height');
   const cfgZoom     = document.getElementById('cfg-zoom');
   const cfgNickname = document.getElementById('cfg-nickname');
-  const cfgHardcore = document.getElementById('cfg-hardcore');
+  const cfgNightmare = document.getElementById('cfg-nightmare');
 
   const grid        = document.getElementById('grid');
   const timerEl     = document.getElementById('timer');
@@ -130,7 +130,7 @@
     tileSet.forEach(t => {
       t.rotation = (1 + Math.floor(Math.random() * 3)) * 90;
     });
-    if (hardcoreMode) {
+    if (nightmareMode) {
       // Fisher-Yates shuffle of tile positions (x/y travel together)
       for (let i = tileSet.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -155,7 +155,7 @@
     tiles.forEach((tile, idx) => {
       const cell = document.createElement('div');
       cell.className = 'tile';
-      if (hardcoreMode) cell.draggable = true;
+      if (nightmareMode) cell.draggable = true;
 
       const img = document.createElement('img');
       img.src = tileUrl(tile.x, tile.y, currentZoom);
@@ -179,10 +179,13 @@
     const cells = grid.querySelectorAll('.tile');
     const imgA = cells[a].querySelector('img');
     const imgB = cells[b].querySelector('img');
+    imgA.style.transition = 'none';
+    imgB.style.transition = 'none';
     imgA.src = tileUrl(tiles[a].x, tiles[a].y, currentZoom);
     imgA.style.transform = `rotate(${tiles[a].rotation}deg)`;
     imgB.src = tileUrl(tiles[b].x, tiles[b].y, currentZoom);
     imgB.style.transform = `rotate(${tiles[b].rotation}deg)`;
+    requestAnimationFrame(() => { imgA.style.transition = ''; imgB.style.transition = ''; });
 
     moves++;
     movesEl.textContent = `Moves: ${moves}`;
@@ -195,7 +198,7 @@
 
   // ── Desktop drag-and-drop (hardcore only) ─────────────────────────────────
   grid.addEventListener('dragstart', e => {
-    if (!hardcoreMode || admiring || gameOver) return;
+    if (!nightmareMode || admiring || gameOver) return;
     const cell = e.target.closest('.tile');
     if (!cell) return;
     dragSrcIdx = parseInt(cell.dataset.idx);
@@ -204,7 +207,7 @@
   });
 
   grid.addEventListener('dragover', e => {
-    if (!hardcoreMode || dragSrcIdx === null) return;
+    if (!nightmareMode || dragSrcIdx === null) return;
     e.preventDefault();
     const cell = e.target.closest('.tile');
     if (!cell) return;
@@ -222,7 +225,7 @@
   });
 
   grid.addEventListener('drop', e => {
-    if (!hardcoreMode || dragSrcIdx === null) return;
+    if (!nightmareMode || dragSrcIdx === null) return;
     e.preventDefault();
     const cell = e.target.closest('.tile');
     if (cell) {
@@ -247,7 +250,7 @@
   // ── Touch (rotate on tap, swap on drag) ───────────────────────────────────
   grid.addEventListener('touchstart', e => {
     e.preventDefault();
-    if (!hardcoreMode) {
+    if (!nightmareMode) {
       // Normal mode: rotate on every touch point immediately
       const rotated = new Set();
       for (const touch of e.changedTouches) {
@@ -272,7 +275,7 @@
   }, { passive: false });
 
   grid.addEventListener('touchmove', e => {
-    if (!hardcoreMode || !touchDragSrc) return;
+    if (!nightmareMode || !touchDragSrc) return;
     e.preventDefault();
     for (const touch of e.changedTouches) {
       if (touch.identifier !== touchDragSrc.id) continue;
@@ -293,7 +296,7 @@
   }, { passive: false });
 
   grid.addEventListener('touchend', e => {
-    if (!hardcoreMode || !touchDragSrc) return;
+    if (!nightmareMode || !touchDragSrc) return;
     e.preventDefault();
     for (const touch of e.changedTouches) {
       if (touch.identifier !== touchDragSrc.id) continue;
@@ -332,7 +335,7 @@
   function checkWin() {
     if (gameOver) return;
     const rotOk = tiles.every(t => t.rotation % 360 === 0);
-    const posOk = !hardcoreMode || tiles.every((t, i) =>
+    const posOk = !nightmareMode || tiles.every((t, i) =>
       t.x === correctPositions[i].x && t.y === correctPositions[i].y);
     if (rotOk && posOk) {
       gameOver = true;
@@ -509,13 +512,13 @@
     touchDragSrc = null;
     touchDragging = false;
 
-    hardcoreMode = cfgHardcore.checked;
+    nightmareMode = cfgNightmare.checked;
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
     const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
     currentZoom = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
 
     tiles = buildTileSet(cols, rows, currentZoom);
-    if (hardcoreMode) correctPositions = tiles.map(t => ({ x: t.x, y: t.y }));
+    if (nightmareMode) correctPositions = tiles.map(t => ({ x: t.x, y: t.y }));
     scramble(tiles);
     render(cols);
 
@@ -538,9 +541,14 @@
     localStorage.setItem('mapRotatorNickname', cfgNickname.value.trim());
   });
 
+  cfgNightmare.checked = localStorage.getItem('mapRotatorNightmare') === 'true';
+
   newGameBtn.addEventListener('click', newGame);
   playAgainBtn.addEventListener('click', newGame);
-  cfgHardcore.addEventListener('change', newGame);
+  cfgNightmare.addEventListener('change', () => {
+    localStorage.setItem('mapRotatorNightmare', cfgNightmare.checked);
+    newGame();
+  });
   admireBtn.addEventListener('click', () => {
     admiring = true;
     winOverlay.classList.add('hidden');
