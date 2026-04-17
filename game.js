@@ -176,7 +176,7 @@
   }
 
   function triggerWinAnimation(onComplete) {
-    const EXTRA = 1440; // 4 full clockwise spins
+    const EXTRA = 720; // 2 full clockwise spins
     const DURATION = 1800; // ms
 
     grid.querySelectorAll('.tile').forEach((cell, i) => {
