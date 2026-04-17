@@ -181,32 +181,19 @@
   }
 
   function triggerWinAnimation(onComplete) {
-    const EXTRA = 720; // 2 full clockwise spins
-    const DURATION = 1800; // ms
+    const SPINS = 3;
+    const DURATION = 2400; // ms
 
-    const imgs = [...grid.querySelectorAll('.tile img')];
+    grid.querySelectorAll('.tile').forEach(cell => cell.classList.add('spinning'));
+    tiles.forEach(t => { t.rotation = SPINS * 360; });
 
-    // Phase 1: disable transitions and snap all tiles to 0deg
-    imgs.forEach(img => {
-      img.style.transition = 'none';
-      img.style.transform = 'rotate(0deg)';
-    });
-
-    // Double rAF ensures the browser has painted the reset before animating
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        imgs.forEach(img => {
-          img.style.transition = `transform ${DURATION}ms cubic-bezier(0.12, 0.8, 0.2, 1)`;
-          img.style.transform = `rotate(${EXTRA}deg)`;
-        });
-        tiles.forEach(t => { t.rotation = EXTRA; });
-
-        setTimeout(() => {
-          imgs.forEach(img => { img.style.transition = ''; });
-          onComplete();
-        }, DURATION + 50);
+    setTimeout(() => {
+      grid.querySelectorAll('.tile').forEach(cell => {
+        cell.classList.remove('spinning');
+        cell.querySelector('img').style.transform = `rotate(${SPINS * 360}deg)`;
       });
-    });
+      onComplete();
+    }, DURATION + 100);
   }
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
