@@ -181,7 +181,7 @@
   }
 
   function triggerWinAnimation(onComplete) {
-    const SPINS = 2;
+    const SPINS = 1;
     const DURATION = 1000; // ms
 
     grid.querySelectorAll('.tile').forEach(cell => cell.classList.add('spinning'));
