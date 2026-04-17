@@ -186,15 +186,14 @@
 
     grid.querySelectorAll('.tile').forEach((cell, i) => {
       const img = cell.querySelector('img');
-      // Disable transition, set current rotation
+      // Normalize to [0, 360) so we always start from a known base
+      const base = tiles[i].rotation % 360;
       img.style.transition = 'none';
-      img.style.transform = `rotate(${tiles[i].rotation}deg)`;
-      // Force reflow so the browser registers the starting position
-      img.getBoundingClientRect();
-      // Now animate forward with a strong ease-out deceleration
+      img.style.transform = `rotate(${base}deg)`;
+      img.getBoundingClientRect(); // force reflow
       img.style.transition = `transform ${DURATION}ms cubic-bezier(0.12, 0.8, 0.2, 1)`;
-      img.style.transform = `rotate(${tiles[i].rotation + EXTRA}deg)`;
-      tiles[i].rotation += EXTRA;
+      img.style.transform = `rotate(${base + EXTRA}deg)`;
+      tiles[i].rotation = base + EXTRA;
     });
 
     setTimeout(() => {
