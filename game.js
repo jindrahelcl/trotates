@@ -153,7 +153,9 @@
   function show(el) { el.classList.remove('hidden'); }
   function hide(el) { el.classList.add('hidden'); }
   function setFreePlayVisible(visible) {
-    document.querySelectorAll('.free-play-only').forEach(el => el.classList.toggle('hidden', !visible));
+    [cfgWidth, cfgHeight, cfgZoom, cfgNightmare, cfgRanked].forEach(el => {
+      el.closest('label').style.display = visible ? '' : 'none';
+    });
     newGameBtn.textContent = visible ? 'New Game' : 'Free Play';
   }
   function getCampaignUnlocked() {
