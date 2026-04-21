@@ -443,3 +443,87 @@ main {
 }
 
 #attribution img:hover { opacity: 0.85; }
+
+/* ── Campaign ──────────────────────────────────────────────────────────── */
+#campaign-btn {
+  background: #4ecca3;
+  color: #1a1a2e;
+}
+
+#campaign-indicator {
+  font-size: 0.85rem;
+  color: #4ecca3;
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.campaign-box {
+  max-width: 500px;
+}
+
+#campaign-map {
+  margin-bottom: 12px;
+}
+
+#campaign-map svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+#campaign-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+
+.campaign-level-chip {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.campaign-level-chip:hover { opacity: 0.8; }
+.campaign-level-chip.done    { background: #4ecca3; color: #1a1a2e; }
+.campaign-level-chip.current { background: #e94560; color: #fff; }
+.campaign-level-chip.locked  { background: #1a1a2e; color: #444; cursor: default; border: 1px solid #333; }
+.campaign-level-chip.locked:hover { opacity: 1; }
+
+.campaign-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.campaign-buttons button {
+  flex: 1;
+  padding: 12px;
+  font-size: 1rem;
+}
+
+#campaign-start-btn { background: #e94560; color: #fff; }
+#campaign-exit-btn  { background: #0f3460; color: #eee; }
+
+#intro-start-btn    { background: #e94560; color: #fff; width: 100%; padding: 12px; font-size: 1rem; }
+
+.campaign-outro {
+  color: #aaa;
+  margin-bottom: 12px;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+#campaign-next-btn { background: #4ecca3; color: #1a1a2e; }
+
+.cz-outline { fill: #16213e; stroke: #0f3460; stroke-width: 1.5; }
+.cz-route   { fill: none; stroke: #333; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.pin-done   { fill: #4ecca3; }
+.pin-current { fill: #e94560; }
+.pin-locked  { fill: #2a2a4a; stroke: #444; stroke-width: 1; }
+.pin-label  { font-size: 8px; fill: #1a1a2e; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.pin-label-locked { fill: #555; }

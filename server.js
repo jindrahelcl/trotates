@@ -181,6 +181,19 @@ function handleResolve(res, code) {
   res.end(JSON.stringify(entry));
 }
 
+// ── Campaign ──────────────────────────────────────────────────────────────
+const CAMPAIGN_FILE = path.join(__dirname, 'campaign.json');
+
+function readCampaign() {
+  try { return JSON.parse(fs.readFileSync(CAMPAIGN_FILE, 'utf8')); }
+  catch { return { title: '', levels: [] }; }
+}
+
+function handleGetCampaign(res) {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(readCampaign()));
+}
+
 // ── Leaderboard ───────────────────────────────────────────────────────────
 // leaderboard.json: { locations: { "tx,ty,z,w,h": [...entries] }, wins: { name: count } }
 const LB_FILE        = path.join(__dirname, 'leaderboard.json');
@@ -299,6 +312,10 @@ const server = http.createServer((req, res) => {
 
   if (url === '/leaderboard/global' && req.method === 'GET') {
     return handleGetGlobal(res);
+  }
+
+  if (url === '/campaign' && req.method === 'GET') {
+    return handleGetCampaign(res);
   }
 
   if (url === '/random-played' && req.method === 'GET') {

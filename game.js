@@ -47,6 +47,11 @@
 
   let pendingSolve = null; // solve waiting for nickname before leaderboard submit
 
+  // Campaign state
+  let campaignMode = false;
+  let campaignData = null;   // { title, levels[] }
+  let campaignLevel = 0;
+
   // Nightmare mode state
   let nightmareMode = false;
   let correctPositions = [];
@@ -66,6 +71,22 @@
   const cfgNickname = document.getElementById('cfg-nickname');
   const cfgNightmare = document.getElementById('cfg-nightmare');
   const cfgRanked    = document.getElementById('cfg-ranked');
+
+  const campaignBtn        = document.getElementById('campaign-btn');
+  const campaignOverlay    = document.getElementById('campaign-overlay');
+  const campaignTitleEl    = document.getElementById('campaign-title');
+  const campaignMapEl      = document.getElementById('campaign-map');
+  const campaignLevelsEl   = document.getElementById('campaign-levels');
+  const campaignStartBtn   = document.getElementById('campaign-start-btn');
+  const campaignExitBtn    = document.getElementById('campaign-exit-btn');
+  const campaignIndicator  = document.getElementById('campaign-indicator');
+  const introOverlay       = document.getElementById('intro-overlay');
+  const introTitle         = document.getElementById('intro-title');
+  const introText          = document.getElementById('intro-text');
+  const introStartBtn      = document.getElementById('intro-start-btn');
+  const campaignOutro      = document.getElementById('campaign-outro');
+  const campaignNextBtn    = document.getElementById('campaign-next-btn');
+  const campaignMapBtn     = document.getElementById('campaign-map-btn');
 
   const grid        = document.getElementById('grid');
   const timerEl     = document.getElementById('timer');
@@ -394,6 +415,186 @@
     setTimeout(checkWin, 270);
   }
 
+  // ── Campaign ──────────────────────────────────────────────────────────────
+  const SVG_W = 400, SVG_H = 260;
+
+  function toSVGCoords(lat, lng) {
+    const x = (lng - CZ_BBOX.minLng) / (CZ_BBOX.maxLng - CZ_BBOX.minLng) * SVG_W;
+    const y = (1 - (lat - CZ_BBOX.minLat) / (CZ_BBOX.maxLat - CZ_BBOX.minLat)) * SVG_H;
+    return { x, y };
+  }
+
+  function renderCampaignMap() {
+    const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+    const levels = campaignData.levels;
+    const ns = 'http://www.w3.org/2000/svg';
+
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+    svg.setAttribute('xmlns', ns);
+
+    // Czechia outline
+    const pts = CZ_POLYGON.map(([lat, lng]) => {
+      const { x, y } = toSVGCoords(lat, lng);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const outline = document.createElementNS(ns, 'polygon');
+    outline.setAttribute('points', pts);
+    outline.setAttribute('class', 'cz-outline');
+    svg.appendChild(outline);
+
+    // Route line
+    const pinCoords = levels.map(lvl => {
+      const loc = tileToLatLng(lvl.tx, lvl.ty, lvl.z);
+      return toSVGCoords(loc.lat, loc.lng);
+    });
+    if (pinCoords.length > 1) {
+      const route = document.createElementNS(ns, 'polyline');
+      route.setAttribute('points', pinCoords.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
+      route.setAttribute('class', 'cz-route');
+      svg.appendChild(route);
+    }
+
+    // Pins
+    levels.forEach((lvl, i) => {
+      const { x, y } = pinCoords[i];
+      const state = i < unlocked ? 'done' : i === unlocked ? 'current' : 'locked';
+      const r = i === unlocked ? 10 : 8;
+
+      const g = document.createElementNS(ns, 'g');
+      g.setAttribute('class', 'campaign-pin');
+      if (state !== 'locked') {
+        g.style.cursor = 'pointer';
+        g.addEventListener('click', () => pickCampaignLevel(i));
+      }
+
+      const circle = document.createElementNS(ns, 'circle');
+      circle.setAttribute('cx', x.toFixed(1));
+      circle.setAttribute('cy', y.toFixed(1));
+      circle.setAttribute('r', r);
+      circle.setAttribute('class', `pin-${state}`);
+
+      const label = document.createElementNS(ns, 'text');
+      label.setAttribute('x', x.toFixed(1));
+      label.setAttribute('y', y.toFixed(1));
+      label.setAttribute('class', state === 'locked' ? 'pin-label pin-label-locked' : 'pin-label');
+      label.textContent = i + 1;
+
+      g.appendChild(circle);
+      g.appendChild(label);
+      svg.appendChild(g);
+    });
+
+    campaignMapEl.innerHTML = '';
+    campaignMapEl.appendChild(svg);
+  }
+
+  function renderCampaignChips() {
+    const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+    campaignLevelsEl.innerHTML = '';
+    campaignData.levels.forEach((lvl, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'campaign-level-chip ' + (i < unlocked ? 'done' : i === unlocked ? 'current' : 'locked');
+      btn.textContent = lvl.title || `Level ${i + 1}`;
+      if (i <= unlocked) btn.addEventListener('click', () => pickCampaignLevel(i));
+      campaignLevelsEl.appendChild(btn);
+    });
+  }
+
+  function openCampaignOverview() {
+    const load = () => {
+      const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+      campaignLevel = Math.min(unlocked, campaignData.levels.length - 1);
+      campaignTitleEl.textContent = campaignData.title || 'Campaign';
+      campaignStartBtn.textContent = unlocked === 0 ? 'Start' : 'Continue';
+      renderCampaignMap();
+      renderCampaignChips();
+      campaignOverlay.classList.remove('hidden');
+    };
+    if (campaignData) { load(); return; }
+    fetch('/campaign')
+      .then(r => r.json())
+      .then(data => { campaignData = data; load(); })
+      .catch(() => {});
+  }
+
+  function pickCampaignLevel(idx) {
+    campaignLevel = idx;
+    campaignOverlay.classList.add('hidden');
+    showIntro(idx);
+  }
+
+  function showIntro(idx) {
+    const lvl = campaignData.levels[idx];
+    introTitle.textContent = lvl.title || `Level ${idx + 1}`;
+    introText.textContent = lvl.intro || '';
+    introStartBtn.dataset.idx = idx;
+    introOverlay.classList.remove('hidden');
+  }
+
+  function launchCampaignLevel(idx) {
+    introOverlay.classList.add('hidden');
+    campaignMode = true;
+    campaignLevel = idx;
+    const lvl = campaignData.levels[idx];
+
+    // Apply level settings (bypass cfg inputs)
+    cfgWidth.value   = lvl.w;
+    cfgHeight.value  = lvl.h;
+    cfgZoom.value    = lvl.z;
+    cfgNightmare.checked = !!lvl.n;
+    pendingTile = { tx: lvl.tx, ty: lvl.ty };
+
+    // Hide free-play controls
+    document.querySelectorAll('.free-play-only').forEach(el => el.classList.add('hidden'));
+    campaignIndicator.textContent = `Level ${idx + 1} / ${campaignData.levels.length}`;
+    campaignIndicator.classList.remove('hidden');
+    campaignBtn.classList.add('hidden');
+
+    resetState();
+    startGame();
+  }
+
+  function exitCampaign() {
+    campaignMode = false;
+    campaignOverlay.classList.add('hidden');
+    document.querySelectorAll('.free-play-only').forEach(el => el.classList.remove('hidden'));
+    campaignIndicator.classList.add('hidden');
+    campaignBtn.classList.remove('hidden');
+    campaignNextBtn.classList.add('hidden');
+    campaignMapBtn.classList.add('hidden');
+    campaignOutro.classList.add('hidden');
+    newGame();
+  }
+
+  function showCampaignWin() {
+    const lvl = campaignData.levels[campaignLevel];
+    const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+    const nextIdx = campaignLevel + 1;
+    const isLast = nextIdx >= campaignData.levels.length;
+
+    // Unlock next level
+    if (campaignLevel >= unlocked) {
+      localStorage.setItem('mapRotatorCampaignLevel', isLast ? unlocked : nextIdx);
+    }
+
+    // Show outro
+    if (lvl.outro) {
+      campaignOutro.textContent = lvl.outro;
+      campaignOutro.classList.remove('hidden');
+    }
+
+    // Show/hide buttons
+    document.getElementById('admire-btn').classList.add('hidden');
+    document.getElementById('play-again-btn').classList.add('hidden');
+    if (!isLast) {
+      campaignNextBtn.classList.remove('hidden');
+    } else {
+      winStats.textContent += ' · Campaign complete! 🎉';
+    }
+    campaignMapBtn.classList.remove('hidden');
+  }
+
   function checkWin() {
     if (gameOver) return;
     const rotOk = tiles.every(t => t.rotation % 360 === 0);
@@ -411,8 +612,11 @@
       }
       const mapUrl = `https://mapy.com/fnc/v1/showmap?mapset=outdoor&center=${currentLoc.lng.toFixed(5)},${currentLoc.lat.toFixed(5)}&zoom=${currentZoom}&marker=true`;
       document.getElementById('mapy-link').href = mapUrl;
-      if (!cfgNickname.value.trim()) anonPrompt.classList.remove('hidden');
-      triggerWinAnimation(() => winOverlay.classList.remove('hidden'));
+      if (!campaignMode && !cfgNickname.value.trim()) anonPrompt.classList.remove('hidden');
+      triggerWinAnimation(() => {
+        winOverlay.classList.remove('hidden');
+        if (campaignMode) showCampaignWin();
+      });
     }
   }
 
@@ -577,6 +781,11 @@
     timerEl.textContent = '0:00';
     winOverlay.classList.add('hidden');
     anonPrompt.classList.add('hidden');
+    campaignOutro.classList.add('hidden');
+    campaignNextBtn.classList.add('hidden');
+    campaignMapBtn.classList.add('hidden');
+    document.getElementById('admire-btn').classList.remove('hidden');
+    document.getElementById('play-again-btn').classList.remove('hidden');
     admiring = false;
     gameOver = false;
     dragSrcIdx = null;
@@ -640,8 +849,11 @@
     localStorage.setItem('mapRotatorRanked', cfgRanked.checked);
   });
 
-  newGameBtn.addEventListener('click', newGame);
-  playAgainBtn.addEventListener('click', newGame);
+  newGameBtn.addEventListener('click', () => { campaignMode = false; newGame(); });
+  playAgainBtn.addEventListener('click', () => {
+    if (campaignMode) { launchCampaignLevel(campaignLevel); }
+    else newGame();
+  });
   cfgNightmare.addEventListener('change', () => {
     localStorage.setItem('mapRotatorNightmare', cfgNightmare.checked);
     newGame();
@@ -650,6 +862,22 @@
     if (pendingSolve) { postSolve(pendingSolve.time); pendingSolve = null; }
     admiring = true;
     winOverlay.classList.add('hidden');
+  });
+
+  campaignBtn.addEventListener('click', openCampaignOverview);
+  campaignStartBtn.addEventListener('click', () => pickCampaignLevel(campaignLevel));
+  campaignExitBtn.addEventListener('click', () => {
+    campaignOverlay.classList.add('hidden');
+  });
+  introStartBtn.addEventListener('click', () => launchCampaignLevel(parseInt(introStartBtn.dataset.idx || campaignLevel)));
+  campaignNextBtn.addEventListener('click', () => {
+    winOverlay.classList.add('hidden');
+    showIntro(campaignLevel + 1);
+  });
+  campaignMapBtn.addEventListener('click', () => {
+    winOverlay.classList.add('hidden');
+    exitCampaign();
+    openCampaignOverview();
   });
   window.addEventListener('resize', () => {
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value) || 4));

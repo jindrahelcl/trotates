@@ -10,15 +10,17 @@
   <header>
     <h1>Map Rotator</h1>
     <div class="controls">
-      <label>W <input type="number" id="cfg-width" value="4" min="1" max="20"></label>
-      <label>H <input type="number" id="cfg-height" value="4" min="1" max="20"></label>
-      <label>Zoom <input type="number" id="cfg-zoom" value="15" min="5" max="19"></label>
+      <label class="free-play-only">W <input type="number" id="cfg-width" value="4" min="1" max="20"></label>
+      <label class="free-play-only">H <input type="number" id="cfg-height" value="4" min="1" max="20"></label>
+      <label class="free-play-only">Zoom <input type="number" id="cfg-zoom" value="15" min="5" max="19"></label>
       <label>Player <input type="text" id="cfg-nickname" placeholder="your name" maxlength="20" autocomplete="off"></label>
-      <label class="nightmare-label"><input type="checkbox" id="cfg-nightmare"> Nightmare</label>
-      <label><input type="checkbox" id="cfg-ranked"> Ranked</label>
+      <label class="nightmare-label free-play-only"><input type="checkbox" id="cfg-nightmare"> Nightmare</label>
+      <label class="free-play-only"><input type="checkbox" id="cfg-ranked"> Ranked</label>
       <span id="timer">0:00</span>
       <span id="moves">Moves: 0</span>
-      <button id="new-game-btn">New Game</button>
+      <span id="campaign-indicator" class="hidden"></span>
+      <button id="new-game-btn" class="free-play-only">New Game</button>
+      <button id="campaign-btn">Campaign</button>
     </div>
   </header>
 
@@ -61,6 +63,26 @@
     </div>
   </section>
 
+  <div id="campaign-overlay" class="overlay hidden">
+    <div class="overlay-box campaign-box">
+      <h2 id="campaign-title"></h2>
+      <div id="campaign-map"></div>
+      <div id="campaign-levels"></div>
+      <div class="campaign-buttons">
+        <button id="campaign-start-btn">Continue</button>
+        <button id="campaign-exit-btn">Exit Campaign</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="intro-overlay" class="overlay hidden">
+    <div class="overlay-box">
+      <h2 id="intro-title"></h2>
+      <p id="intro-text"></p>
+      <button id="intro-start-btn">Start</button>
+    </div>
+  </div>
+
   <div id="win-overlay" class="overlay hidden">
     <div class="overlay-box">
       <h2>Puzzle Solved!</h2>
@@ -72,10 +94,13 @@
         <input type="text" id="anon-name" placeholder="your name" maxlength="20" autocomplete="off">
         <button id="anon-save-btn">Save</button>
       </div>
+      <p id="campaign-outro" class="campaign-outro hidden"></p>
       <div class="win-buttons">
         <button id="admire-btn">Admire</button>
         <button id="play-again-btn">Play Again</button>
+        <button id="campaign-next-btn" class="hidden">Next Level →</button>
       </div>
+      <button id="campaign-map-btn" class="share-btn hidden">Back to Map</button>
     </div>
   </div>
 
