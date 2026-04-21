@@ -83,10 +83,12 @@
   const campaignStartBtn   = document.getElementById('campaign-start-btn');
   const campaignExitBtn    = document.getElementById('campaign-exit-btn');
   const campaignIndicator  = document.getElementById('campaign-indicator');
-  const introOverlay       = document.getElementById('intro-overlay');
-  const introTitle         = document.getElementById('intro-title');
-  const introText          = document.getElementById('intro-text');
-  const introStartBtn      = document.getElementById('intro-start-btn');
+  const introOverlay          = document.getElementById('intro-overlay');
+  const introTitle            = document.getElementById('intro-title');
+  const introText             = document.getElementById('intro-text');
+  const introStartBtn         = document.getElementById('intro-start-btn');
+  const introNicknamePrompt   = document.getElementById('intro-nickname-prompt');
+  const introNickname         = document.getElementById('intro-nickname');
   const campaignOutro      = document.getElementById('campaign-outro');
   const campaignNextBtn    = document.getElementById('campaign-next-btn');
   const campaignMapBtn     = document.getElementById('campaign-map-btn');
@@ -536,7 +538,11 @@
     introTitle.textContent = lvl.title || `Level ${idx + 1}`;
     introText.textContent = lvl.intro || '';
     introStartBtn.dataset.idx = idx;
+    const hasName = !!cfgNickname.value.trim();
+    introNicknamePrompt.classList.toggle('hidden', hasName);
+    if (!hasName) introNickname.value = '';
     introOverlay.classList.remove('hidden');
+    if (!hasName) setTimeout(() => introNickname.focus(), 50);
   }
 
   function launchCampaignLevel(idx) {
@@ -920,7 +926,14 @@
       .forEach(k => localStorage.removeItem(k));
     location.reload();
   });
-  introStartBtn.addEventListener('click', () => launchCampaignLevel(parseInt(introStartBtn.dataset.idx || campaignLevel)));
+  introStartBtn.addEventListener('click', () => {
+    const name = introNickname.value.trim();
+    if (name) {
+      cfgNickname.value = name;
+      localStorage.setItem('mapRotatorNickname', name);
+    }
+    launchCampaignLevel(parseInt(introStartBtn.dataset.idx || campaignLevel));
+  });
   campaignNextBtn.addEventListener('click', () => {
     winOverlay.classList.add('hidden');
     showIntro(campaignLevel + 1);

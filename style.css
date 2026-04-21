@@ -518,6 +518,34 @@ main {
 
 #intro-start-btn    { background: #e94560; color: #fff; width: 100%; padding: 12px; font-size: 1rem; }
 
+.intro-nickname-prompt {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.intro-nickname-prompt.hidden { display: none; }
+
+.intro-nickname-prompt input {
+  width: 160px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #eee;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.intro-nickname-prompt input:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
 .campaign-outro {
   color: #aaa;
   margin-bottom: 12px;
