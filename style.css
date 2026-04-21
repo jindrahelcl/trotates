@@ -555,15 +555,6 @@ main {
 
 #campaign-next-btn { background: #4ecca3; color: #1a1a2e; }
 
-.campaign-reset-btn {
-  background: none;
-  border: 1px solid #333;
-  color: #555;
-  font-size: 0.75rem;
-  padding: 5px 10px;
-}
-.campaign-reset-btn:hover { color: #e94560; border-color: #e94560; opacity: 1; }
-
 .cz-outline { fill: #1a2744; stroke: #4ecca3; stroke-width: 1; }
 .cz-route   { fill: none; stroke: #4ecca355; stroke-width: 1.5; stroke-dasharray: 4 3; }
 .pin-done   { fill: #4ecca3; }

@@ -918,15 +918,6 @@
   });
   campaignExitBtn.addEventListener('click', () => exitCampaign());
 
-  const campaignResetBtn = document.getElementById('campaign-reset-btn');
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    campaignResetBtn.classList.remove('hidden');
-  }
-  campaignResetBtn.addEventListener('click', () => {
-    ['mapRotatorCampaignLevel', 'mapRotatorNickname', 'mapRotatorNightmare', 'mapRotatorRanked']
-      .forEach(k => localStorage.removeItem(k));
-    location.reload();
-  });
   introStartBtn.addEventListener('click', () => {
     const name = introNickname.value.trim();
     if (name) {
