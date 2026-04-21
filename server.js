@@ -123,8 +123,13 @@ function generateCode() {
 }
 
 function readShorts() {
-  try { return JSON.parse(fs.readFileSync(SHORTS_FILE, 'utf8')); }
-  catch { return { _rev: {} }; }
+  try {
+    const data = JSON.parse(fs.readFileSync(SHORTS_FILE, 'utf8'));
+    if (!data._rev) data._rev = {};
+    return data;
+  } catch {
+    return { _rev: {} };
+  }
 }
 
 function writeShorts(data) {
