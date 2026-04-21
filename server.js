@@ -203,8 +203,8 @@ function handleGetCampaignLeaderboard(res) {
   const campaign = readCampaign();
   const lb = readLeaderboard();
   const result = campaign.levels.map((lvl, i) => {
-    const key = `${lvl.tx},${lvl.ty},${lvl.z},${lvl.w},${lvl.h},${lvl.n}`;
-    const top = (lb.locations[key] || [])[0] || null;
+    const key = `${lvl.tx},${lvl.ty},${lvl.z},${lvl.w},${lvl.h}`;
+    const top = (lb.locations[key] || []).filter(e => e.campaign)[0] || null;
     return { idx: i, title: lvl.title, top };
   });
   res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -236,7 +236,7 @@ function handleGetLeaderboard(query, res) {
   const params = new URLSearchParams(query);
   const loc = params.get('loc') || '';
   const data = readLeaderboard();
-  const entries = (data.locations[loc] || []).slice(0, LB_DISPLAY);
+  const entries = (data.locations[loc] || []).filter(e => !e.campaign).slice(0, LB_DISPLAY);
   const avg = entries.length
     ? Math.round(entries.reduce((s, e) => s + e.time, 0) / entries.length)
     : 0;
@@ -264,9 +264,10 @@ function handlePostLeaderboard(req, res) {
       if (typeof time !== 'number' || typeof moves !== 'number') throw new Error();
       const entry = {
         nickname: String(nickname || '').trim().slice(0, 20) || 'anonymous',
-        time:  Math.round(time),
-        moves: Math.round(moves),
-        date:  new Date().toISOString(),
+        time:     Math.round(time),
+        moves:    Math.round(moves),
+        date:     new Date().toISOString(),
+        campaign: !!parsed.campaign,
       };
       const locKey = String(loc || '');
       const data = readLeaderboard();
@@ -276,9 +277,9 @@ function handlePostLeaderboard(req, res) {
       if (data.locations[locKey].length > LB_MAX_PER_LOC) {
         data.locations[locKey].length = LB_MAX_PER_LOC;
       }
-      data.wins[entry.nickname] = (data.wins[entry.nickname] || 0) + 1;
+      if (!entry.campaign) data.wins[entry.nickname] = (data.wins[entry.nickname] || 0) + 1;
       writeLeaderboard(data);
-      const top = data.locations[locKey].slice(0, LB_DISPLAY);
+      const top = data.locations[locKey].filter(e => !e.campaign).slice(0, LB_DISPLAY);
       const avg = top.length
         ? Math.round(top.reduce((s, e) => s + e.time, 0) / top.length)
         : 0;
@@ -294,12 +295,19 @@ function handlePostLeaderboard(req, res) {
 // ── Random played location ────────────────────────────────────────────────
 function handleRandomPlayed(query, res) {
   const params = new URLSearchParams(query);
-  const z = parseInt(params.get('z'));
-  const w = parseInt(params.get('w'));
-  const h = parseInt(params.get('h'));
+  const z    = parseInt(params.get('z'));
+  const w    = parseInt(params.get('w'));
+  const h    = parseInt(params.get('h'));
+  const nick = (params.get('nick') || '').trim();
   const data = readLeaderboard();
   const suffix = `,${z},${w},${h}`;
-  const keys = Object.keys(data.locations).filter(k => k.endsWith(suffix));
+  const keys = Object.keys(data.locations).filter(k => {
+    if (!k.endsWith(suffix)) return false;
+    const freePlay = data.locations[k].filter(e => !e.campaign);
+    if (!freePlay.length) return false;
+    if (nick && freePlay.some(e => e.nickname === nick)) return false;
+    return true;
+  });
   if (!keys.length) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ tx: null }));
