@@ -2,19 +2,19 @@
   "title": "Cesta napříč Čechami",
   "levels": [
     {
-      "tx": 70793, "ty": 44407, "z": 17, "w": 2, "h": 2, "n": 0,
+      "tx": 17698, "ty": 11101, "z": 15, "w": 2, "h": 2, "n": 0,
       "title": "Praha — Začátek cesty",
       "intro": "Tvoje cesta začíná v srdci Čech, kde Vltava opisuje oblouk kolem města sta věží. Zorientuj se na Starém Městě.",
       "outro": "Pražské střechy máš za sebou. Čas vyrazit na jih podél řeky."
     },
     {
-      "tx": 70742, "ty": 44734, "z": 17, "w": 2, "h": 2, "n": 0,
+      "tx": 17685, "ty": 11183, "z": 15, "w": 2, "h": 2, "n": 0,
       "title": "Vltavský luh",
       "intro": "Řeka tě vede jižními Čechami přes mokřady a lesy.",
       "outro": "Dobře. Kraj se stává divočejším."
     },
     {
-      "tx": 35454, "ty": 22500, "z": 16, "w": 3, "h": 3, "n": 0,
+      "tx": 17727, "ty": 11250, "z": 15, "w": 3, "h": 3, "n": 0,
       "title": "Třeboňská pánev",
       "intro": "Rybníky a rákosí. Tady se snadno ztratíš.",
       "outro": "Prošel jsi bažinami. Teď Šumava."
