@@ -273,14 +273,12 @@
   document.addEventListener('mouseup', e => {
     if (!nightmareMode || dragSrcIdx === null) return;
     if (isDragging) {
+      suppressClick = true;
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const cell = el && el.closest('.tile');
       if (cell) {
         const dropIdx = parseInt(cell.dataset.idx);
-        if (dropIdx !== dragSrcIdx) {
-          swapTiles(dragSrcIdx, dropIdx);
-          suppressClick = true;
-        }
+        if (dropIdx !== dragSrcIdx) swapTiles(dragSrcIdx, dropIdx);
       }
       clearDrag();
     }
@@ -358,14 +356,12 @@
       if (touch.identifier !== touchDragSrc.id) continue;
       clearDrag();
       if (isDragging) {
+        suppressClick = true;
         const el = document.elementFromPoint(touch.clientX, touch.clientY);
         const cell = el && el.closest('.tile');
         if (cell) {
           const dropIdx = parseInt(cell.dataset.idx);
-          if (dropIdx !== touchDragSrc.idx) {
-            swapTiles(touchDragSrc.idx, dropIdx);
-            suppressClick = true;
-          }
+          if (dropIdx !== touchDragSrc.idx) swapTiles(touchDragSrc.idx, dropIdx);
         }
       } else {
         rotateTile(touchDragSrc.idx);
