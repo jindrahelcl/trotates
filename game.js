@@ -65,6 +65,7 @@
   const cfgZoom     = document.getElementById('cfg-zoom');
   const cfgNickname = document.getElementById('cfg-nickname');
   const cfgNightmare = document.getElementById('cfg-nightmare');
+  const cfgRepeat    = document.getElementById('cfg-repeat');
 
   const grid        = document.getElementById('grid');
   const timerEl     = document.getElementById('timer');
@@ -561,7 +562,7 @@
   }
 
   // ── New game ──────────────────────────────────────────────────────────────
-  function newGame() {
+  function resetState() {
     if (pendingSolve) { postSolve(pendingSolve.time); pendingSolve = null; }
     stopTimer();
     startTime = null;
@@ -577,7 +578,9 @@
     isDragging = false;
     touchDragSrc = null;
     hideGhost();
+  }
 
+  function startGame() {
     nightmareMode = cfgNightmare.checked;
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
     const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
@@ -601,6 +604,24 @@
     fetchGlobal();
   }
 
+  function newGame() {
+    resetState();
+    if (cfgRepeat.checked) {
+      const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
+      const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
+      const zoom = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
+      fetch(`/random-played?w=${cols}&h=${rows}&z=${zoom}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.tx !== null) pendingTile = { tx: data.tx, ty: data.ty };
+          startGame();
+        })
+        .catch(() => startGame());
+    } else {
+      startGame();
+    }
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
   cfgNickname.value = localStorage.getItem('mapRotatorNickname') || '';
   cfgNickname.addEventListener('change', () => {
@@ -608,6 +629,10 @@
   });
 
   cfgNightmare.checked = localStorage.getItem('mapRotatorNightmare') !== 'false';
+  cfgRepeat.checked = localStorage.getItem('mapRotatorRepeat') === 'true';
+  cfgRepeat.addEventListener('change', () => {
+    localStorage.setItem('mapRotatorRepeat', cfgRepeat.checked);
+  });
 
   newGameBtn.addEventListener('click', newGame);
   playAgainBtn.addEventListener('click', newGame);

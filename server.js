@@ -261,6 +261,26 @@ function handlePostLeaderboard(req, res) {
   });
 }
 
+// ── Random played location ────────────────────────────────────────────────
+function handleRandomPlayed(query, res) {
+  const params = new URLSearchParams(query);
+  const z = parseInt(params.get('z'));
+  const w = parseInt(params.get('w'));
+  const h = parseInt(params.get('h'));
+  const data = readLeaderboard();
+  const suffix = `,${z},${w},${h}`;
+  const keys = Object.keys(data.locations).filter(k => k.endsWith(suffix));
+  if (!keys.length) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ tx: null }));
+    return;
+  }
+  const key = keys[Math.floor(Math.random() * keys.length)];
+  const [tx, ty] = key.split(',').map(Number);
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ tx, ty }));
+}
+
 // ── Router ────────────────────────────────────────────────────────────────
 const TILE_RE    = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
 const SHORT_RE   = /^\/s\/([a-z]{10})$/;  // page route — serves index.html
@@ -279,6 +299,10 @@ const server = http.createServer((req, res) => {
 
   if (url === '/leaderboard/global' && req.method === 'GET') {
     return handleGetGlobal(res);
+  }
+
+  if (url === '/random-played' && req.method === 'GET') {
+    return handleRandomPlayed(query, res);
   }
 
   if (url === '/shorten' && req.method === 'POST') {
