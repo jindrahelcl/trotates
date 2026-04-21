@@ -543,6 +543,7 @@
     if (!hasName) introNickname.value = '';
     introOverlay.classList.remove('hidden');
     if (!hasName) setTimeout(() => introNickname.focus(), 50);
+    introNickname.onkeydown = e => { if (e.key === 'Enter') introStartBtn.click(); };
   }
 
   function launchCampaignLevel(idx) {
