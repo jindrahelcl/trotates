@@ -548,10 +548,10 @@
   }
 
   function openCampaignOverview() {
+    if (!campaignMode) saveFreePlaySettings();
+    setFreePlayVisible(false);
     const load = () => {
       const unlocked = getCampaignUnlocked();
-      if (!campaignMode) saveFreePlaySettings();
-      setFreePlayVisible(false);
       campaignLevel = Math.min(unlocked, campaignData.levels.length - 1);
       campaignTitleEl.textContent = campaignData.title || 'Campaign';
       campaignStartBtn.textContent = campaignMode ? 'Resume' : (unlocked === 0 ? 'Start' : 'Continue');
