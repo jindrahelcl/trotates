@@ -520,8 +520,8 @@ main {
 
 #campaign-next-btn { background: #4ecca3; color: #1a1a2e; }
 
-.cz-outline { fill: #16213e; stroke: #0f3460; stroke-width: 1.5; }
-.cz-route   { fill: none; stroke: #333; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.cz-outline { fill: #1a2744; stroke: #4ecca3; stroke-width: 1; }
+.cz-route   { fill: none; stroke: #4ecca355; stroke-width: 1.5; stroke-dasharray: 4 3; }
 .pin-done   { fill: #4ecca3; }
 .pin-current { fill: #e94560; }
 .pin-locked  { fill: #2a2a4a; stroke: #444; stroke-width: 1; }
