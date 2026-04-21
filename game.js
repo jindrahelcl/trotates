@@ -288,7 +288,13 @@
   });
 
   // Cancel drag on any interruption
-  document.addEventListener('contextmenu', () => { if (dragSrcIdx !== null) cancelDrag(); });
+  grid.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if (dragSrcIdx !== null) { cancelDrag(); return; }
+    const cell = e.target.closest('.tile');
+    if (cell) rotateTile(parseInt(cell.dataset.idx), -1);
+  });
+  document.addEventListener('contextmenu', e => { if (dragSrcIdx !== null) cancelDrag(); });
   window.addEventListener('blur', cancelDrag);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') cancelDrag(); });
   grid.addEventListener('touchcancel', cancelDrag);
@@ -372,12 +378,12 @@
     }
   }, { passive: false });
 
-  function rotateTile(idx) {
+  function rotateTile(idx, dir = 1) {
     if (admiring || gameOver) return;
     if (!startTime) startTimer();
 
     const tile = tiles[idx];
-    tile.rotation = tile.rotation + 90;
+    tile.rotation = tile.rotation + 90 * dir;
     moves++;
     movesEl.textContent = `Moves: ${moves}`;
 
