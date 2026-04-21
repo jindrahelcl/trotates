@@ -891,7 +891,7 @@
   });
 
   cfgNightmare.checked = localStorage.getItem('mapRotatorNightmare') !== 'false';
-  cfgRanked.checked = localStorage.getItem('mapRotatorRanked') === 'true';
+  cfgRanked.checked = localStorage.getItem('mapRotatorRanked') !== 'false';
   cfgRanked.addEventListener('change', () => {
     localStorage.setItem('mapRotatorRanked', cfgRanked.checked);
   });
