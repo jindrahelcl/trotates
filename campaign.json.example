@@ -2,31 +2,31 @@
   "title": "Cesta napříč Čechami",
   "levels": [
     {
-      "tx": 17698, "ty": 11101, "z": 15, "w": 2, "h": 2, "n": 0,
+      "tx": 17698, "ty": 11101, "z": 15, "w": 3, "h": 3, "n": 0,
       "title": "Praha — Začátek cesty",
       "intro": "Tvoje cesta začíná v srdci Čech, kde Vltava opisuje oblouk kolem města sta věží. Zorientuj se na Starém Městě.",
       "outro": "Pražské střechy máš za sebou. Čas vyrazit na jih podél řeky."
     },
     {
-      "tx": 17685, "ty": 11183, "z": 15, "w": 2, "h": 2, "n": 0,
+      "tx": 17685, "ty": 11183, "z": 15, "w": 3, "h": 3, "n": 1,
       "title": "Vltavský luh",
       "intro": "Řeka tě vede jižními Čechami přes mokřady a lesy.",
       "outro": "Dobře. Kraj se stává divočejším."
     },
     {
-      "tx": 17727, "ty": 11250, "z": 15, "w": 3, "h": 3, "n": 0,
+      "tx": 17727, "ty": 11250, "z": 15, "w": 4, "h": 4, "n": 1,
       "title": "Třeboňská pánev",
       "intro": "Rybníky a rákosí. Tady se snadno ztratíš.",
       "outro": "Prošel jsi bažinami. Teď Šumava."
     },
     {
-      "tx": 17612, "ty": 11253, "z": 15, "w": 3, "h": 3, "n": 1,
+      "tx": 17612, "ty": 11253, "z": 15, "w": 5, "h": 4, "n": 1,
       "title": "Šumava",
       "intro": "Hluboký les. Stromy vypadají všechny stejně. Noční můra začíná.",
       "outro": "Přežil jsi Šumavu. Teď na sever."
     },
     {
-      "tx": 17816, "ty": 11008, "z": 15, "w": 4, "h": 4, "n": 1,
+      "tx": 17816, "ty": 11008, "z": 15, "w": 6, "h": 4, "n": 1,
       "title": "Krkonoše",
       "intro": "Nejvyšší hory Čech. Ledovcová údolí, horské louky — ale orientace v mlze není snadná.",
       "outro": "Summit. Výhled do celé země."
