@@ -513,7 +513,7 @@
       const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
       campaignLevel = Math.min(unlocked, campaignData.levels.length - 1);
       campaignTitleEl.textContent = campaignData.title || 'Campaign';
-      campaignStartBtn.textContent = unlocked === 0 ? 'Start' : 'Continue';
+      campaignStartBtn.textContent = campaignMode ? 'Resume' : (unlocked === 0 ? 'Start' : 'Continue');
       renderCampaignMap();
       renderCampaignChips();
       campaignOverlay.classList.remove('hidden');
@@ -905,10 +905,11 @@
   });
 
   campaignBtn.addEventListener('click', openCampaignOverview);
-  campaignStartBtn.addEventListener('click', () => pickCampaignLevel(campaignLevel));
-  campaignExitBtn.addEventListener('click', () => {
-    campaignOverlay.classList.add('hidden');
+  campaignStartBtn.addEventListener('click', () => {
+    if (campaignMode) { campaignOverlay.classList.add('hidden'); return; }
+    pickCampaignLevel(campaignLevel);
   });
+  campaignExitBtn.addEventListener('click', () => exitCampaign());
   introStartBtn.addEventListener('click', () => launchCampaignLevel(parseInt(introStartBtn.dataset.idx || campaignLevel)));
   campaignNextBtn.addEventListener('click', () => {
     winOverlay.classList.add('hidden');
