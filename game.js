@@ -45,6 +45,8 @@
   let currentTile = { x: 0, y: 0 };
   let pendingTile = null;
 
+  let pendingSolve = null; // solve waiting for nickname before leaderboard submit
+
   // Nightmare mode state
   let nightmareMode = false;
   let correctPositions = [];
@@ -399,7 +401,11 @@
       stopTimer();
       const elapsed = elapsedSeconds();
       winStats.textContent = `${moves} move${moves !== 1 ? 's' : ''} · ${formatTime(elapsed)}`;
-      postSolve(elapsed);
+      if (cfgNickname.value.trim()) {
+        postSolve(elapsed);
+      } else {
+        pendingSolve = { time: elapsed };
+      }
       const mapUrl = `https://mapy.com/fnc/v1/showmap?mapset=outdoor&center=${currentLoc.lng.toFixed(5)},${currentLoc.lat.toFixed(5)}&zoom=${currentZoom}&marker=true`;
       document.getElementById('mapy-link').href = mapUrl;
       if (!cfgNickname.value.trim()) anonPrompt.classList.remove('hidden');
@@ -528,6 +534,10 @@
       cfgNickname.value = name;
       localStorage.setItem('mapRotatorNickname', name);
     }
+    if (pendingSolve) {
+      postSolve(pendingSolve.time);
+      pendingSolve = null;
+    }
     anonPrompt.classList.add('hidden');
   });
 
@@ -556,6 +566,7 @@
 
   // ── New game ──────────────────────────────────────────────────────────────
   function newGame() {
+    if (pendingSolve) { postSolve(pendingSolve.time); pendingSolve = null; }
     stopTimer();
     startTime = null;
     moves = 0;
@@ -584,7 +595,7 @@
     fetch('/shorten', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tx: currentTile.x, ty: currentTile.y, z: currentZoom, w: cols, h: rows }),
+      body: JSON.stringify({ tx: currentTile.x, ty: currentTile.y, z: currentZoom, w: cols, h: rows, n: nightmareMode ? 1 : 0 }),
     })
       .then(r => r.json())
       .then(({ code }) => { history.replaceState(null, '', '/s/' + code); })
@@ -600,7 +611,7 @@
     localStorage.setItem('mapRotatorNickname', cfgNickname.value.trim());
   });
 
-  cfgNightmare.checked = localStorage.getItem('mapRotatorNightmare') === 'true';
+  cfgNightmare.checked = localStorage.getItem('mapRotatorNightmare') !== 'false';
 
   newGameBtn.addEventListener('click', newGame);
   playAgainBtn.addEventListener('click', newGame);
@@ -609,6 +620,7 @@
     newGame();
   });
   admireBtn.addEventListener('click', () => {
+    if (pendingSolve) { postSolve(pendingSolve.time); pendingSolve = null; }
     admiring = true;
     winOverlay.classList.add('hidden');
   });
@@ -630,6 +642,10 @@
           cfgHeight.value = data.h;
           cfgZoom.value   = data.z;
           pendingTile = { tx: data.tx, ty: data.ty };
+          if (typeof data.n === 'number') {
+            cfgNightmare.checked = !!data.n;
+            localStorage.setItem('mapRotatorNightmare', cfgNightmare.checked);
+          }
         }
         newGame();
       })

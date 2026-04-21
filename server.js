@@ -142,8 +142,9 @@ function handleShorten(req, res) {
       const z  = Math.round(Number(parsed.z));
       const w  = Math.round(Number(parsed.w));
       const h  = Math.round(Number(parsed.h));
+      const n  = parsed.n ? 1 : 0;
       if (!isFinite(tx) || !isFinite(ty)) throw new Error('bad coords');
-      const revKey = `${tx},${ty},${z},${w},${h}`;
+      const revKey = `${tx},${ty},${z},${w},${h},${n}`;
       const shorts = readShorts();
       if (shorts._rev[revKey]) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -156,7 +157,7 @@ function handleShorten(req, res) {
         code = generateCode();
         if (++attempts > 1000) throw new Error('code space exhausted');
       } while (shorts[code]);
-      shorts[code] = { tx, ty, z, w, h };
+      shorts[code] = { tx, ty, z, w, h, n };
       shorts._rev[revKey] = code;
       writeShorts(shorts);
       res.writeHead(200, { 'Content-Type': 'application/json' });
