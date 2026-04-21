@@ -68,9 +68,9 @@
   const DRAG_THRESHOLD = 12;
 
   const LS = {
-    nickname:      LS.nickname,
-    nightmare:     LS.nightmare,
-    ranked:        LS.ranked,
+    nickname:      'mapRotatorNickname',
+    nightmare:     'mapRotatorNightmare',
+    ranked:        'mapRotatorRanked',
     campaignLevel: 'mapRotatorCampaignLevel',
   };
 
