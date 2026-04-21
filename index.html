@@ -39,6 +39,7 @@
     <div class="lb-tabs">
       <button class="lb-tab active" data-tab="location">This Location</button>
       <button class="lb-tab" data-tab="global">Global</button>
+      <button class="lb-tab" data-tab="campaign">Campaign</button>
     </div>
     <div id="lb-location" class="lb-panel">
       <table id="lb-table">
@@ -58,6 +59,16 @@
         </thead>
         <tbody id="lb-global-body">
           <tr><td colspan="3" class="lb-empty">No wins yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="lb-campaign" class="lb-panel hidden">
+      <table id="lb-campaign-table">
+        <thead>
+          <tr><th>#</th><th>Level</th><th>Player</th><th>Time</th><th>Moves</th></tr>
+        </thead>
+        <tbody id="lb-campaign-body">
+          <tr><td colspan="5" class="lb-empty">Loading…</td></tr>
         </tbody>
       </table>
     </div>

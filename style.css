@@ -359,7 +359,8 @@ main {
 }
 
 #lb-table,
-#lb-global-table {
+#lb-global-table,
+#lb-campaign-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
@@ -367,9 +368,11 @@ main {
 
 #lb-table { min-width: 320px; }
 #lb-global-table { min-width: 200px; }
+#lb-campaign-table { min-width: 360px; }
 
 #lb-table th,
-#lb-global-table th {
+#lb-global-table th,
+#lb-campaign-table th {
   text-align: left;
   padding: 6px 8px;
   color: #666;
@@ -379,7 +382,8 @@ main {
 }
 
 #lb-table td,
-#lb-global-table td {
+#lb-global-table td,
+#lb-campaign-table td {
   padding: 6px 8px;
   border-bottom: 1px solid #0f3460;
   color: #ccc;
@@ -387,7 +391,8 @@ main {
 }
 
 #lb-table tbody tr:hover td,
-#lb-global-table tbody tr:hover td {
+#lb-global-table tbody tr:hover td,
+#lb-campaign-table tbody tr:hover td {
   background: #16213e;
 }
 
@@ -406,7 +411,8 @@ main {
   .lb-col-date { display: none; }
 
   #lb-table,
-  #lb-global-table { min-width: unset; }
+  #lb-global-table,
+  #lb-campaign-table { min-width: unset; }
 }
 
 .lb-avg td {

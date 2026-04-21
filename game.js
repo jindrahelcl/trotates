@@ -602,6 +602,7 @@
       winStats.textContent += ' · Campaign complete! 🎉';
     }
     campaignMapBtn.classList.remove('hidden');
+    campaignLbLoaded = false; // stale after new solve
   }
 
   function checkWin() {
@@ -646,9 +647,11 @@
   }
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
-  const lbBody       = document.getElementById('lb-body');
-  const lbFoot       = document.getElementById('lb-foot');
-  const lbGlobalBody = document.getElementById('lb-global-body');
+  const lbBody         = document.getElementById('lb-body');
+  const lbFoot         = document.getElementById('lb-foot');
+  const lbGlobalBody   = document.getElementById('lb-global-body');
+  const lbCampaignBody = document.getElementById('lb-campaign-body');
+  let campaignLbLoaded = false;
 
   function postSolve(time) {
     const cols = Math.max(1, parseInt(cfgWidth.value)  || 4);
@@ -719,6 +722,29 @@
     }).join('');
   }
 
+  function fetchCampaignLeaderboard() {
+    fetch('/campaign-leaderboard')
+      .then(r => r.json())
+      .then(data => {
+        campaignLbLoaded = true;
+        if (!data.length) {
+          lbCampaignBody.innerHTML = '<tr><td colspan="5" class="lb-empty">No campaign solves yet</td></tr>';
+          return;
+        }
+        lbCampaignBody.innerHTML = data.map((lvl, i) => {
+          const title = escapeHtml(lvl.title || `Level ${lvl.idx + 1}`);
+          if (!lvl.top) {
+            return `<tr><td>${i + 1}</td><td>${title}</td><td colspan="3" class="lb-anon">—</td></tr>`;
+          }
+          const name = lvl.top.nickname ? escapeHtml(lvl.top.nickname) : '<span class="lb-anon">anonymous</span>';
+          return `<tr><td>${i + 1}</td><td>${title}</td><td>${name}</td><td>${formatTime(lvl.top.time)}</td><td>${lvl.top.moves}</td></tr>`;
+        }).join('');
+      })
+      .catch(() => {
+        lbCampaignBody.innerHTML = '<tr><td colspan="5" class="lb-empty">Could not load</td></tr>';
+      });
+  }
+
   // Tab switching
   document.querySelectorAll('.lb-tab').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -727,6 +753,8 @@
       const tab = btn.dataset.tab;
       document.getElementById('lb-location').classList.toggle('hidden', tab !== 'location');
       document.getElementById('lb-global').classList.toggle('hidden', tab !== 'global');
+      document.getElementById('lb-campaign').classList.toggle('hidden', tab !== 'campaign');
+      if (tab === 'campaign' && !campaignLbLoaded) fetchCampaignLeaderboard();
     });
   });
 
@@ -821,7 +849,10 @@
       body: JSON.stringify({ tx: currentTile.x, ty: currentTile.y, z: currentZoom, w: cols, h: rows, n: nightmareMode ? 1 : 0 }),
     })
       .then(r => r.json())
-      .then(({ code }) => { history.replaceState(null, '', '/s/' + code); })
+      .then(({ code }) => {
+        const suffix = campaignMode ? `?c=${campaignLevel}` : '';
+        history.replaceState(null, '', '/s/' + code + suffix);
+      })
       .catch(() => {});
 
     fetchLeaderboard(currentLocKey);
@@ -895,6 +926,8 @@
   // Resolve short URL on page load
   const pathMatch = window.location.pathname.match(/^\/s\/([a-z]{10})$/);
   const shortCode = pathMatch ? pathMatch[1] : null;
+  const urlParams = new URLSearchParams(window.location.search);
+  const campaignParam = urlParams.get('c');
 
   if (shortCode) {
     fetch('/resolve/' + shortCode)
@@ -910,7 +943,21 @@
             localStorage.setItem('mapRotatorNightmare', cfgNightmare.checked);
           }
         }
-        newGame();
+        if (campaignParam !== null) {
+          const idx = parseInt(campaignParam);
+          const loadAndLaunch = (cd) => {
+            campaignData = cd;
+            const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+            if (!isNaN(idx) && idx < cd.levels.length && idx <= unlocked) {
+              showIntro(idx);
+            } else {
+              newGame();
+            }
+          };
+          fetch('/campaign').then(r => r.json()).then(loadAndLaunch).catch(() => newGame());
+        } else {
+          newGame();
+        }
       })
       .catch(() => newGame());
   } else {

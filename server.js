@@ -194,6 +194,18 @@ function handleGetCampaign(res) {
   res.end(JSON.stringify(readCampaign()));
 }
 
+function handleGetCampaignLeaderboard(res) {
+  const campaign = readCampaign();
+  const lb = readLeaderboard();
+  const result = campaign.levels.map((lvl, i) => {
+    const key = `${lvl.tx},${lvl.ty},${lvl.z},${lvl.w},${lvl.h},${lvl.n}`;
+    const top = (lb.locations[key] || [])[0] || null;
+    return { idx: i, title: lvl.title, top };
+  });
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(result));
+}
+
 // ── Leaderboard ───────────────────────────────────────────────────────────
 // leaderboard.json: { locations: { "tx,ty,z,w,h": [...entries] }, wins: { name: count } }
 const LB_FILE        = path.join(__dirname, 'leaderboard.json');
@@ -316,6 +328,10 @@ const server = http.createServer((req, res) => {
 
   if (url === '/campaign' && req.method === 'GET') {
     return handleGetCampaign(res);
+  }
+
+  if (url === '/campaign-leaderboard' && req.method === 'GET') {
+    return handleGetCampaignLeaderboard(res);
   }
 
   if (url === '/random-played' && req.method === 'GET') {
