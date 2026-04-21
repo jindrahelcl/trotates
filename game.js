@@ -684,7 +684,7 @@
     fetch('/leaderboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ time, moves, width: cols, height: rows, zoom: currentZoom, nickname, loc: currentLocKey }),
+      body: JSON.stringify({ time, moves, width: cols, height: rows, zoom: currentZoom, nickname, loc: currentLocKey, campaign: campaignMode }),
     })
       .then(r => r.json())
       .then(data => { renderLeaderboard(data); fetchGlobal(); })
@@ -889,7 +889,8 @@
       const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
       const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
       const zoom = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
-      fetch(`/random-played?w=${cols}&h=${rows}&z=${zoom}`)
+      const nick = encodeURIComponent(cfgNickname.value.trim());
+      fetch(`/random-played?w=${cols}&h=${rows}&z=${zoom}&nick=${nick}`)
         .then(r => r.json())
         .then(data => {
           if (data.tx !== null) pendingTile = { tx: data.tx, ty: data.ty };
