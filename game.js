@@ -910,6 +910,17 @@
     pickCampaignLevel(campaignLevel);
   });
   campaignExitBtn.addEventListener('click', () => exitCampaign());
+
+  const campaignResetBtn = document.getElementById('campaign-reset-btn');
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    campaignResetBtn.classList.remove('hidden');
+  }
+  campaignResetBtn.addEventListener('click', () => {
+    localStorage.removeItem('mapRotatorCampaignLevel');
+    campaignMode = false;
+    campaignOverlay.classList.add('hidden');
+    openCampaignOverview();
+  });
   introStartBtn.addEventListener('click', () => launchCampaignLevel(parseInt(introStartBtn.dataset.idx || campaignLevel)));
   campaignNextBtn.addEventListener('click', () => {
     winOverlay.classList.add('hidden');
