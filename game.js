@@ -437,7 +437,7 @@
     svg.setAttribute('xmlns', ns);
 
     // Czechia outline
-    const pts = CZ_POLYGON_SVG.filter((_, i) => i % 2 === 0).map(([lng, lat]) => {
+    const pts = CZ_POLYGON_SVG.map(([lng, lat]) => {
       const { x, y } = toSVGCoords(lat, lng);
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(' ');
