@@ -554,6 +554,7 @@
 
     // Hide free-play controls
     document.querySelectorAll('.free-play-only').forEach(el => el.classList.add('hidden'));
+    newGameBtn.textContent = 'Free Play';
     campaignIndicator.textContent = `Level ${idx + 1} / ${campaignData.levels.length}`;
     campaignIndicator.classList.remove('hidden');
     campaignBtn.classList.add('hidden');
@@ -566,6 +567,7 @@
     campaignMode = false;
     campaignOverlay.classList.add('hidden');
     document.querySelectorAll('.free-play-only').forEach(el => el.classList.remove('hidden'));
+    newGameBtn.textContent = 'New Game';
     campaignIndicator.classList.add('hidden');
     campaignBtn.classList.remove('hidden');
     campaignNextBtn.classList.add('hidden');
@@ -856,7 +858,7 @@
     localStorage.setItem('mapRotatorRanked', cfgRanked.checked);
   });
 
-  newGameBtn.addEventListener('click', () => { campaignMode = false; newGame(); });
+  newGameBtn.addEventListener('click', () => { campaignMode = false; newGameBtn.textContent = 'New Game'; newGame(); });
   playAgainBtn.addEventListener('click', () => {
     if (campaignMode) { launchCampaignLevel(campaignLevel); }
     else newGame();
@@ -883,7 +885,6 @@
   });
   campaignMapBtn.addEventListener('click', () => {
     winOverlay.classList.add('hidden');
-    exitCampaign();
     openCampaignOverview();
   });
   window.addEventListener('resize', () => {
