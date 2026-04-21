@@ -118,6 +118,7 @@ main {
 #grid {
   display: grid;
   gap: 3px;
+  user-select: none;
 }
 
 .tile {
