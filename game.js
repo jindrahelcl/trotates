@@ -65,7 +65,7 @@
   const cfgZoom     = document.getElementById('cfg-zoom');
   const cfgNickname = document.getElementById('cfg-nickname');
   const cfgNightmare = document.getElementById('cfg-nightmare');
-  const cfgRepeat    = document.getElementById('cfg-repeat');
+  const cfgRanked    = document.getElementById('cfg-ranked');
 
   const grid        = document.getElementById('grid');
   const timerEl     = document.getElementById('timer');
@@ -606,7 +606,7 @@
 
   function newGame() {
     resetState();
-    if (cfgRepeat.checked) {
+    if (cfgRanked.checked) {
       const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
       const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
       const zoom = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
@@ -629,9 +629,9 @@
   });
 
   cfgNightmare.checked = localStorage.getItem('mapRotatorNightmare') !== 'false';
-  cfgRepeat.checked = localStorage.getItem('mapRotatorRepeat') === 'true';
-  cfgRepeat.addEventListener('change', () => {
-    localStorage.setItem('mapRotatorRepeat', cfgRepeat.checked);
+  cfgRanked.checked = localStorage.getItem('mapRotatorRanked') === 'true';
+  cfgRanked.addEventListener('change', () => {
+    localStorage.setItem('mapRotatorRanked', cfgRanked.checked);
   });
 
   newGameBtn.addEventListener('click', newGame);
