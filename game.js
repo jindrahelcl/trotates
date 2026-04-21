@@ -419,11 +419,15 @@
   }
 
   // ── Campaign ──────────────────────────────────────────────────────────────
-  const SVG_W = 400, SVG_H = 260;
+  const SVG_W = 400;
+  const _midLat = (CZ_BBOX.minLat + CZ_BBOX.maxLat) / 2;
+  const _cosLat = Math.cos(_midLat * Math.PI / 180);
+  const _scale  = SVG_W / ((CZ_BBOX.maxLng - CZ_BBOX.minLng) * _cosLat);
+  const SVG_H   = Math.round((CZ_BBOX.maxLat - CZ_BBOX.minLat) * _scale);
 
   function toSVGCoords(lat, lng) {
-    const x = (lng - CZ_BBOX.minLng) / (CZ_BBOX.maxLng - CZ_BBOX.minLng) * SVG_W;
-    const y = (1 - (lat - CZ_BBOX.minLat) / (CZ_BBOX.maxLat - CZ_BBOX.minLat)) * SVG_H;
+    const x = (lng - CZ_BBOX.minLng) * _cosLat * _scale;
+    const y = (CZ_BBOX.maxLat - lat) * _scale;
     return { x, y };
   }
 
