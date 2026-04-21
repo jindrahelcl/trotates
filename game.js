@@ -59,6 +59,7 @@
   let campaignData = null;   // { title, levels[] }
   let campaignLevel = 0;
   let campaignLbLoaded = false;
+  let savedFreePlay = null;  // cfg snapshot taken when entering campaign
 
   // Nightmare mode state
   let currentLoc  = { lat: 0, lng: 0 };
@@ -529,9 +530,27 @@
     });
   }
 
+  function saveFreePlaySettings() {
+    savedFreePlay = {
+      w: cfgWidth.value, h: cfgHeight.value, z: cfgZoom.value,
+      nightmare: cfgNightmare.checked, ranked: cfgRanked.checked,
+    };
+  }
+
+  function restoreFreePlaySettings() {
+    if (!savedFreePlay) return;
+    cfgWidth.value    = savedFreePlay.w;
+    cfgHeight.value   = savedFreePlay.h;
+    cfgZoom.value     = savedFreePlay.z;
+    cfgNightmare.checked = savedFreePlay.nightmare;
+    cfgRanked.checked    = savedFreePlay.ranked;
+    savedFreePlay = null;
+  }
+
   function openCampaignOverview() {
     const load = () => {
       const unlocked = getCampaignUnlocked();
+      if (!campaignMode) saveFreePlaySettings();
       setFreePlayVisible(false);
       campaignLevel = Math.min(unlocked, campaignData.levels.length - 1);
       campaignTitleEl.textContent = campaignData.title || 'Campaign';
@@ -590,6 +609,7 @@
   function exitCampaign() {
     campaignMode = false;
     hide(campaignOverlay);
+    restoreFreePlaySettings();
     setFreePlayVisible(true);
     hide(campaignIndicator);
     show(campaignBtn);
@@ -914,7 +934,7 @@
     localStorage.setItem(LS.ranked, cfgRanked.checked);
   });
 
-  newGameBtn.addEventListener('click', () => { campaignMode = false; setFreePlayVisible(true); newGame(); });
+  newGameBtn.addEventListener('click', () => { restoreFreePlaySettings(); campaignMode = false; setFreePlayVisible(true); newGame(); });
   playAgainBtn.addEventListener('click', () => {
     if (campaignMode) { launchCampaignLevel(campaignLevel); }
     else newGame();
