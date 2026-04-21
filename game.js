@@ -916,10 +916,9 @@
     campaignResetBtn.classList.remove('hidden');
   }
   campaignResetBtn.addEventListener('click', () => {
-    localStorage.removeItem('mapRotatorCampaignLevel');
-    campaignMode = false;
-    campaignOverlay.classList.add('hidden');
-    openCampaignOverview();
+    ['mapRotatorCampaignLevel', 'mapRotatorNickname', 'mapRotatorNightmare', 'mapRotatorRanked']
+      .forEach(k => localStorage.removeItem(k));
+    location.reload();
   });
   introStartBtn.addEventListener('click', () => launchCampaignLevel(parseInt(introStartBtn.dataset.idx || campaignLevel)));
   campaignNextBtn.addEventListener('click', () => {
