@@ -527,13 +527,11 @@ main {
 #campaign-next-btn { background: #4ecca3; color: #1a1a2e; }
 
 .campaign-reset-btn {
-  margin-top: 12px;
   background: none;
   border: 1px solid #333;
   color: #555;
   font-size: 0.75rem;
-  padding: 4px 12px;
-  width: 100%;
+  padding: 5px 10px;
 }
 .campaign-reset-btn:hover { color: #e94560; border-color: #e94560; opacity: 1; }
 
