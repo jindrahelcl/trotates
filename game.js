@@ -67,6 +67,13 @@
   let touchDragSrc = null;    // { idx, id } for touch
   const DRAG_THRESHOLD = 12;
 
+  const LS = {
+    nickname:      LS.nickname,
+    nightmare:     LS.nightmare,
+    ranked:        LS.ranked,
+    campaignLevel: 'mapRotatorCampaignLevel',
+  };
+
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const cfgWidth    = document.getElementById('cfg-width');
   const cfgHeight   = document.getElementById('cfg-height');
@@ -131,6 +138,17 @@
 
   function hideGhost() {
     dragGhost.style.display = 'none';
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function show(el) { el.classList.remove('hidden'); }
+  function hide(el) { el.classList.add('hidden'); }
+  function setFreePlayVisible(visible) {
+    document.querySelectorAll('.free-play-only').forEach(el => el.classList.toggle('hidden', !visible));
+    newGameBtn.textContent = visible ? 'New Game' : 'Free Play';
+  }
+  function getCampaignUnlocked() {
+    return parseInt(localStorage.getItem(LS.campaignLevel) || '0');
   }
 
   // ── Tile math (Web Mercator) ──────────────────────────────────────────────
@@ -434,7 +452,7 @@
   }
 
   function renderCampaignMap() {
-    const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+    const unlocked = getCampaignUnlocked();
     const levels = campaignData.levels;
     const ns = 'http://www.w3.org/2000/svg';
 
@@ -499,7 +517,7 @@
   }
 
   function renderCampaignChips() {
-    const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+    const unlocked = getCampaignUnlocked();
     campaignLevelsEl.innerHTML = '';
     campaignData.levels.forEach((lvl, i) => {
       const btn = document.createElement('button');
@@ -512,13 +530,14 @@
 
   function openCampaignOverview() {
     const load = () => {
-      const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+      const unlocked = getCampaignUnlocked();
+      setFreePlayVisible(false);
       campaignLevel = Math.min(unlocked, campaignData.levels.length - 1);
       campaignTitleEl.textContent = campaignData.title || 'Campaign';
       campaignStartBtn.textContent = campaignMode ? 'Resume' : (unlocked === 0 ? 'Start' : 'Continue');
       renderCampaignMap();
       renderCampaignChips();
-      campaignOverlay.classList.remove('hidden');
+      show(campaignOverlay);
     };
     if (campaignData) { load(); return; }
     fetch('/campaign')
@@ -529,7 +548,7 @@
 
   function pickCampaignLevel(idx) {
     campaignLevel = idx;
-    campaignOverlay.classList.add('hidden');
+    hide(campaignOverlay);
     showIntro(idx);
   }
 
@@ -541,30 +560,27 @@
     const hasName = !!cfgNickname.value.trim();
     introNicknamePrompt.classList.toggle('hidden', hasName);
     if (!hasName) introNickname.value = '';
-    introOverlay.classList.remove('hidden');
+    show(introOverlay);
     if (!hasName) setTimeout(() => introNickname.focus(), 50);
     introNickname.onkeydown = e => { if (e.key === 'Enter') introStartBtn.click(); };
   }
 
   function launchCampaignLevel(idx) {
-    introOverlay.classList.add('hidden');
+    hide(introOverlay);
     campaignMode = true;
     campaignLevel = idx;
     const lvl = campaignData.levels[idx];
 
-    // Apply level settings (bypass cfg inputs)
-    cfgWidth.value   = lvl.w;
-    cfgHeight.value  = lvl.h;
-    cfgZoom.value    = lvl.z;
+    cfgWidth.value       = lvl.w;
+    cfgHeight.value      = lvl.h;
+    cfgZoom.value        = lvl.z;
     cfgNightmare.checked = !!lvl.n;
     pendingTile = { tx: lvl.tx, ty: lvl.ty };
 
-    // Hide free-play controls
-    document.querySelectorAll('.free-play-only').forEach(el => el.classList.add('hidden'));
-    newGameBtn.textContent = 'Free Play';
+    setFreePlayVisible(false);
     campaignIndicator.textContent = `Level ${idx + 1} / ${campaignData.levels.length}`;
-    campaignIndicator.classList.remove('hidden');
-    campaignBtn.classList.add('hidden');
+    show(campaignIndicator);
+    hide(campaignBtn);
 
     resetState();
     startGame();
@@ -572,43 +588,41 @@
 
   function exitCampaign() {
     campaignMode = false;
-    campaignOverlay.classList.add('hidden');
-    document.querySelectorAll('.free-play-only').forEach(el => el.classList.remove('hidden'));
-    newGameBtn.textContent = 'New Game';
-    campaignIndicator.classList.add('hidden');
-    campaignBtn.classList.remove('hidden');
-    campaignNextBtn.classList.add('hidden');
-    campaignMapBtn.classList.add('hidden');
-    campaignOutro.classList.add('hidden');
+    hide(campaignOverlay);
+    setFreePlayVisible(true);
+    hide(campaignIndicator);
+    show(campaignBtn);
+    hide(campaignNextBtn);
+    hide(campaignMapBtn);
+    hide(campaignOutro);
     newGame();
   }
 
   function showCampaignWin() {
     const lvl = campaignData.levels[campaignLevel];
-    const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+    const unlocked = getCampaignUnlocked();
     const nextIdx = campaignLevel + 1;
     const isLast = nextIdx >= campaignData.levels.length;
 
     // Unlock next level
     if (campaignLevel >= unlocked) {
-      localStorage.setItem('mapRotatorCampaignLevel', isLast ? unlocked : nextIdx);
+      localStorage.setItem(LS.campaignLevel, isLast ? unlocked : nextIdx);
     }
 
     // Show outro
     if (lvl.outro) {
       campaignOutro.textContent = lvl.outro;
-      campaignOutro.classList.remove('hidden');
+      show(campaignOutro);
     }
 
-    // Show/hide buttons
-    document.getElementById('admire-btn').classList.add('hidden');
-    document.getElementById('play-again-btn').classList.add('hidden');
+    hide(admireBtn);
+    hide(playAgainBtn);
     if (!isLast) {
-      campaignNextBtn.classList.remove('hidden');
+      show(campaignNextBtn);
     } else {
       winStats.textContent += ' · Campaign complete! 🎉';
     }
-    campaignMapBtn.classList.remove('hidden');
+    show(campaignMapBtn);
     campaignLbLoaded = false; // stale after new solve
   }
 
@@ -629,9 +643,9 @@
       }
       const mapUrl = `https://mapy.com/fnc/v1/showmap?mapset=outdoor&center=${currentLoc.lng.toFixed(5)},${currentLoc.lat.toFixed(5)}&zoom=${currentZoom}&marker=true`;
       document.getElementById('mapy-link').href = mapUrl;
-      if (!campaignMode && !cfgNickname.value.trim()) anonPrompt.classList.remove('hidden');
+      if (!campaignMode && !cfgNickname.value.trim()) show(anonPrompt);
       triggerWinAnimation(() => {
-        winOverlay.classList.remove('hidden');
+        show(winOverlay);
         if (campaignMode) showCampaignWin();
       });
     }
@@ -783,13 +797,13 @@
     const name = anonName.value.trim().slice(0, 20);
     if (name) {
       cfgNickname.value = name;
-      localStorage.setItem('mapRotatorNickname', name);
+      localStorage.setItem(LS.nickname, name);
     }
     if (pendingSolve) {
       postSolve(pendingSolve.time);
       pendingSolve = null;
     }
-    anonPrompt.classList.add('hidden');
+    hide(anonPrompt);
   });
 
   // ── Timer ─────────────────────────────────────────────────────────────────
@@ -823,13 +837,13 @@
     moves = 0;
     movesEl.textContent = 'Moves: 0';
     timerEl.textContent = '0:00';
-    winOverlay.classList.add('hidden');
-    anonPrompt.classList.add('hidden');
-    campaignOutro.classList.add('hidden');
-    campaignNextBtn.classList.add('hidden');
-    campaignMapBtn.classList.add('hidden');
-    document.getElementById('admire-btn').classList.remove('hidden');
-    document.getElementById('play-again-btn').classList.remove('hidden');
+    hide(winOverlay);
+    hide(anonPrompt);
+    hide(campaignOutro);
+    hide(campaignNextBtn);
+    hide(campaignMapBtn);
+    show(admireBtn);
+    show(playAgainBtn);
     admiring = false;
     gameOver = false;
     dragSrcIdx = null;
@@ -885,35 +899,35 @@
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
-  cfgNickname.value = localStorage.getItem('mapRotatorNickname') || '';
+  cfgNickname.value = localStorage.getItem(LS.nickname) || '';
   cfgNickname.addEventListener('change', () => {
-    localStorage.setItem('mapRotatorNickname', cfgNickname.value.trim());
+    localStorage.setItem(LS.nickname, cfgNickname.value.trim());
   });
 
-  cfgNightmare.checked = localStorage.getItem('mapRotatorNightmare') !== 'false';
-  cfgRanked.checked = localStorage.getItem('mapRotatorRanked') !== 'false';
+  cfgNightmare.checked = localStorage.getItem(LS.nightmare) !== 'false';
+  cfgRanked.checked = localStorage.getItem(LS.ranked) !== 'false';
   cfgRanked.addEventListener('change', () => {
-    localStorage.setItem('mapRotatorRanked', cfgRanked.checked);
+    localStorage.setItem(LS.ranked, cfgRanked.checked);
   });
 
-  newGameBtn.addEventListener('click', () => { campaignMode = false; newGameBtn.textContent = 'New Game'; newGame(); });
+  newGameBtn.addEventListener('click', () => { campaignMode = false; setFreePlayVisible(true); newGame(); });
   playAgainBtn.addEventListener('click', () => {
     if (campaignMode) { launchCampaignLevel(campaignLevel); }
     else newGame();
   });
   cfgNightmare.addEventListener('change', () => {
-    localStorage.setItem('mapRotatorNightmare', cfgNightmare.checked);
+    localStorage.setItem(LS.nightmare, cfgNightmare.checked);
     newGame();
   });
   admireBtn.addEventListener('click', () => {
     if (pendingSolve) { postSolve(pendingSolve.time); pendingSolve = null; }
     admiring = true;
-    winOverlay.classList.add('hidden');
+    hide(winOverlay);
   });
 
   campaignBtn.addEventListener('click', openCampaignOverview);
   campaignStartBtn.addEventListener('click', () => {
-    if (campaignMode) { campaignOverlay.classList.add('hidden'); return; }
+    if (campaignMode) { hide(campaignOverlay); return; }
     pickCampaignLevel(campaignLevel);
   });
   campaignExitBtn.addEventListener('click', () => exitCampaign());
@@ -922,16 +936,16 @@
     const name = introNickname.value.trim();
     if (name) {
       cfgNickname.value = name;
-      localStorage.setItem('mapRotatorNickname', name);
+      localStorage.setItem(LS.nickname, name);
     }
     launchCampaignLevel(parseInt(introStartBtn.dataset.idx || campaignLevel));
   });
   campaignNextBtn.addEventListener('click', () => {
-    winOverlay.classList.add('hidden');
+    hide(winOverlay);
     showIntro(campaignLevel + 1);
   });
   campaignMapBtn.addEventListener('click', () => {
-    winOverlay.classList.add('hidden');
+    hide(winOverlay);
     openCampaignOverview();
   });
   window.addEventListener('resize', () => {
@@ -956,14 +970,14 @@
           pendingTile = { tx: data.tx, ty: data.ty };
           if (typeof data.n === 'number') {
             cfgNightmare.checked = !!data.n;
-            localStorage.setItem('mapRotatorNightmare', cfgNightmare.checked);
+            localStorage.setItem(LS.nightmare, cfgNightmare.checked);
           }
         }
         if (campaignParam !== null) {
           const idx = parseInt(campaignParam);
           const loadAndLaunch = (cd) => {
             campaignData = cd;
-            const unlocked = parseInt(localStorage.getItem('mapRotatorCampaignLevel') || '0');
+            const unlocked = getCampaignUnlocked();
             if (!isNaN(idx) && idx < cd.levels.length && idx <= unlocked) {
               showIntro(idx);
             } else {
