@@ -1,41 +1,41 @@
 {
-  "title": "Cesta napříč Čechami",
+  "title": "Journey Across Czechia",
   "levels": [
     {
       "tx": 17698, "ty": 11101, "z": 15, "w": 3, "h": 3, "n": 0,
-      "title": "Praha — Začátek cesty",
-      "intro": "Tvoje cesta začíná v srdci Čech, kde Vltava opisuje oblouk kolem města sta věží. Zorientuj se na Starém Městě.",
-      "outro": "Pražské střechy máš za sebou. Čas vyrazit na jih podél řeky."
+      "title": "Prague — The Beginning",
+      "intro": "Your journey starts in the heart of Bohemia, where the Vltava bends around the city of a hundred spires. Find your bearings in the Old Town.",
+      "outro": "Prague's rooftops are behind you. Time to head south along the river."
     },
     {
       "tx": 17685, "ty": 11183, "z": 15, "w": 4, "h": 4, "n": 0,
-      "title": "Vltavský luh",
-      "intro": "Řeka tě vede jižními Čechami přes mokřady a lesy.",
-      "outro": "Dobře. Kraj se stává divočejším."
+      "title": "Vltava Floodplain",
+      "intro": "The river leads you through southern Bohemia, past wetlands and forests.",
+      "outro": "Good. The landscape is growing wilder."
     },
     {
       "tx": 17727, "ty": 11250, "z": 15, "w": 2, "h": 2, "n": 1,
-      "title": "Třeboňská pánev",
-      "intro": "Rybníky a rákosí. Tady se snadno ztratíš. Noční můra začíná.",
-      "outro": "Prošel jsi bažinami. Teď Šumava."
+      "title": "Třeboň Basin",
+      "intro": "Fish ponds and reeds everywhere. It's easy to get lost here. Nightmare begins.",
+      "outro": "You've crossed the marshes. Now for the Šumava forests."
     },
     {
       "tx": 17612, "ty": 11253, "z": 15, "w": 4, "h": 4, "n": 1,
       "title": "Šumava",
-      "intro": "Hluboký les. Stromy vypadají všechny stejně.",
-      "outro": "Přežil jsi Šumavu. Teď na východ."
+      "intro": "Deep forest. Every tree looks the same.",
+      "outro": "You survived Šumava. Now head east."
     },
     {
       "tx": 17895, "ty": 11226, "z": 15, "w": 4, "h": 4, "n": 1,
-      "title": "Brno — Moravská metropole",
-      "intro": "Přecházíš do Moravy. Jiné kopce, jiné lesy — ale stále těžké.",
-      "outro": "Brno za tebou. Poslední výzva čeká na severu."
+      "title": "Brno — Moravian Capital",
+      "intro": "You cross into Moravia. Different hills, different forests — but just as challenging.",
+      "outro": "Brno is behind you. The final challenge awaits in the north."
     },
     {
       "tx": 17816, "ty": 11008, "z": 15, "w": 6, "h": 4, "n": 1,
-      "title": "Krkonoše — Závěr",
-      "intro": "Nejvyšší hory Čech. Ledovcová údolí, horské louky. Toto je finále.",
-      "outro": "Zdolal jsi celou cestu. Gratulujeme!"
+      "title": "Krkonoše — The Finale",
+      "intro": "The highest mountains in Czechia. Glacial valleys, alpine meadows. This is the finale.",
+      "outro": "You've completed the whole journey. Congratulations!"
     }
   ]
 }
