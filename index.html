@@ -13,11 +13,10 @@
       <label class="free-play-only">W <input type="number" id="cfg-width" value="4" min="1" max="20"></label>
       <label class="free-play-only">H <input type="number" id="cfg-height" value="4" min="1" max="20"></label>
       <label class="free-play-only">Zoom <input type="number" id="cfg-zoom" value="15" min="5" max="19"></label>
-      <div class="player-label">
-        <input type="text" id="cfg-nickname" placeholder="set name…" maxlength="20" autocomplete="off">
-        <span id="nick-display" class="nick-display" style="display:none"></span>
+      <input type="text" id="cfg-nickname" style="display:none" maxlength="20" autocomplete="off">
+      <div class="player-widget">
+        <span id="nick-display" class="nick-display"></span>
         <button id="account-btn" class="account-btn" title="Account">⚙</button>
-        <span id="nick-error" class="nick-error" style="display:none"></span>
       </div>
       <label class="nightmare-label free-play-only"><input type="checkbox" id="cfg-nightmare"> Nightmare</label>
       <label class="free-play-only"><input type="checkbox" id="cfg-ranked"> Ranked</label>
@@ -95,9 +94,6 @@
     <div class="overlay-box">
       <h2 id="intro-title"></h2>
       <p id="intro-text"></p>
-      <div id="intro-nickname-prompt" class="intro-nickname-prompt hidden">
-        <label>Your name <input type="text" id="intro-nickname" placeholder="anonymous" maxlength="20" autocomplete="off"></label>
-      </div>
       <button id="intro-start-btn">Start</button>
     </div>
   </div>
@@ -109,10 +105,7 @@
       <a id="mapy-link" href="#" target="_blank" class="mapy-link">View on mapy.com</a>
       <button id="share-btn" class="share-btn">Copy challenge link</button>
       <div id="anon-prompt" class="anon-prompt hidden">
-        <span class="anon-label">Save score as:</span>
-        <input type="text" id="anon-name" placeholder="choose a name" maxlength="20" autocomplete="off">
-        <button id="anon-save-btn">Save</button>
-        <span id="anon-error" class="anon-error" style="display:none"></span>
+        Score not saved — <button id="anon-save-btn" class="anon-account-btn">Create account</button> to save it.
       </div>
       <p id="campaign-outro" class="campaign-outro hidden"></p>
       <button id="campaign-map-btn" class="share-btn hidden">Campaign Map</button>
@@ -133,39 +126,52 @@
         <span id="claim-code-display"></span>
         <button id="claim-code-copy-btn">Copy</button>
       </div>
-      <p class="claim-code-note">You can always retrieve this code from the account button (⚙) next to your name.</p>
+      <p class="claim-code-note">You can always find this code in your account (⚙).</p>
       <button id="claim-code-ok-btn">Got it</button>
     </div>
   </div>
 
-  <!-- Account settings -->
+  <!-- Account modal -->
   <div id="account-overlay" class="overlay hidden">
     <div class="overlay-box">
       <h2>Account</h2>
-      <div id="account-registered-section" style="display:none">
-        <p>Logged in as <strong id="account-nickname-display"></strong> <button id="account-change-name-btn" class="account-change-btn">Change</button></p>
-        <div id="account-change-name-row" class="claim-input-row" style="display:none">
-          <input type="text" id="account-new-name-input" placeholder="new name" maxlength="20" autocomplete="off">
-          <button id="account-new-name-btn">Save</button>
-        </div>
-        <p id="account-change-msg" class="account-msg" style="display:none"></p>
-        <p class="account-section-label">Recovery code:</p>
+
+      <!-- Shown when registered -->
+      <div id="account-logged-in" style="display:none">
+        <p class="account-status">Logged in as <strong id="account-nickname-display"></strong></p>
+        <p class="account-section-label">Recovery code</p>
         <div class="claim-code-box">
           <span id="account-claim-code-display"></span>
           <button id="account-copy-btn">Copy</button>
         </div>
+        <p class="account-section-label">Change name</p>
+        <div class="claim-input-row">
+          <input type="text" id="account-new-name-input" placeholder="new name" maxlength="20" autocomplete="off">
+          <button id="account-new-name-btn">Save</button>
+        </div>
+        <p id="account-change-msg" class="account-msg" style="display:none"></p>
       </div>
-      <div id="account-unregistered-section" style="display:none">
-        <p class="account-note">Set a player name to create an account.</p>
+
+      <!-- Shown when not registered -->
+      <div id="account-create-section" style="display:none">
+        <p class="account-section-label">Create account</p>
+        <div class="claim-input-row">
+          <input type="text" id="account-create-input" placeholder="choose a name" maxlength="20" autocomplete="off">
+          <button id="account-create-btn">Create</button>
+        </div>
+        <p id="account-create-msg" class="account-msg" style="display:none"></p>
       </div>
+
+      <!-- Always shown -->
       <div class="account-restore-section">
-        <p class="account-section-label">Restore account on another device:</p>
+        <p class="account-section-label">Restore existing account</p>
         <div class="claim-input-row">
           <input type="text" id="account-claim-input" placeholder="bafoc-emidu-kalev" autocomplete="off" spellcheck="false">
           <button id="account-claim-btn">Restore</button>
         </div>
         <p id="account-claim-msg" class="account-msg" style="display:none"></p>
       </div>
+
       <button id="account-close-btn">Close</button>
     </div>
   </div>

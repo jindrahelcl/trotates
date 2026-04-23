@@ -84,8 +84,9 @@
   };
 
   // ── Player identity ────────────────────────────────────────────────────────
-  let playerRegistered = false;
-  let playerClaimCode  = null;
+  let playerRegistered          = false;
+  let playerClaimCode           = null;
+  let pendingCampaignAfterLogin = false;
 
   function getToken() {
     let t = localStorage.getItem(LS.token);
@@ -101,20 +102,7 @@
   }
 
   function lockNickname() {
-    cfgNickname.style.display = 'none';
     nickDisplay.textContent = cfgNickname.value.trim();
-    nickDisplay.style.display = '';
-  }
-
-  function unlockNickname() {
-    nickDisplay.style.display = 'none';
-    cfgNickname.style.display = '';
-  }
-
-  function showNickError(msg) {
-    nickError.textContent = msg;
-    nickError.style.display = '';
-    setTimeout(() => { nickError.style.display = 'none'; }, 4000);
   }
 
   async function registerPlayer(nickname) {
@@ -128,15 +116,22 @@
       if (data.ok) {
         playerRegistered = true;
         playerClaimCode  = data.claimCode;
+        cfgNickname.value = nickname;
+        localStorage.setItem(LS.nickname, nickname);
         lockNickname();
-        updateAccountBtn();
-        if (data.isNew) showClaimOverlay(data.claimCode);
-      } else if (data.error === 'taken') {
-        // Don't silently pretend registration worked
-        cfgNickname.value = '';
-        localStorage.setItem(LS.nickname, '');
         updateRankedAvailability();
-        showNickError('Name taken');
+        updateAccountBtn();
+        accountOverlay.classList.add('hidden');
+        if (pendingSolve) {
+          postSolve(pendingSolve.time);
+          pendingSolve = null;
+          hide(anonPrompt);
+        }
+        if (pendingCampaignAfterLogin) {
+          pendingCampaignAfterLogin = false;
+          openCampaignOverview();
+        }
+        if (data.isNew) showClaimOverlay(data.claimCode);
       }
       return data;
     } catch {
@@ -152,13 +147,11 @@
       if (!data.registered) return;
       playerRegistered = true;
       playerClaimCode  = data.claimCode;
+      // Sync nickname from server; server is authoritative
+      cfgNickname.value = data.nickname;
+      localStorage.setItem(LS.nickname, data.nickname);
       lockNickname();
-      // Sync nickname: if server has one and local is empty, populate it
-      if (data.nickname && !cfgNickname.value.trim()) {
-        cfgNickname.value = data.nickname;
-        localStorage.setItem(LS.nickname, data.nickname);
-        updateRankedAvailability();
-      }
+      updateRankedAvailability();
       // Sync campaign level: server wins if ahead
       const localLevel = parseInt(localStorage.getItem(LS.campaignLevel) || '0');
       if (data.campaignLevel > localLevel) {
@@ -188,8 +181,6 @@
   const introTitle          = document.getElementById('intro-title');
   const introText           = document.getElementById('intro-text');
   const introStartBtn       = document.getElementById('intro-start-btn');
-  const introNicknamePrompt = document.getElementById('intro-nickname-prompt');
-  const introNickname       = document.getElementById('intro-nickname');
   const campaignOutro      = document.getElementById('campaign-outro');
   const campaignNextBtn    = document.getElementById('campaign-next-btn');
   const campaignMapBtn     = document.getElementById('campaign-map-btn');
@@ -204,35 +195,31 @@
   const playAgainBtn = document.getElementById('play-again-btn');
   const shareBtn    = document.getElementById('share-btn');
   const anonPrompt  = document.getElementById('anon-prompt');
-  const anonName    = document.getElementById('anon-name');
-  const anonSaveBtn = document.getElementById('anon-save-btn');
   const mapyLink    = document.getElementById('mapy-link');
 
-  const accountBtn           = document.getElementById('account-btn');
-  const accountOverlay       = document.getElementById('account-overlay');
-  const accountNicknameDisplay = document.getElementById('account-nickname-display');
+  const nickDisplay             = document.getElementById('nick-display');
+  const accountBtn              = document.getElementById('account-btn');
+  const accountOverlay          = document.getElementById('account-overlay');
+  const accountLoggedIn         = document.getElementById('account-logged-in');
+  const accountNicknameDisplay  = document.getElementById('account-nickname-display');
   const accountClaimCodeDisplay = document.getElementById('account-claim-code-display');
-  const accountCopyBtn       = document.getElementById('account-copy-btn');
-  const accountClaimInput    = document.getElementById('account-claim-input');
-  const accountClaimBtn      = document.getElementById('account-claim-btn');
-  const accountClaimMsg      = document.getElementById('account-claim-msg');
-  const accountClosBtn       = document.getElementById('account-close-btn');
-  const accountRegisteredSection   = document.getElementById('account-registered-section');
-  const accountUnregisteredSection = document.getElementById('account-unregistered-section');
+  const accountCopyBtn          = document.getElementById('account-copy-btn');
+  const accountNewNameInput     = document.getElementById('account-new-name-input');
+  const accountNewNameBtn       = document.getElementById('account-new-name-btn');
+  const accountChangeMsg        = document.getElementById('account-change-msg');
+  const accountCreateSection    = document.getElementById('account-create-section');
+  const accountCreateInput      = document.getElementById('account-create-input');
+  const accountCreateBtn        = document.getElementById('account-create-btn');
+  const accountCreateMsg        = document.getElementById('account-create-msg');
+  const accountClaimInput       = document.getElementById('account-claim-input');
+  const accountClaimBtn         = document.getElementById('account-claim-btn');
+  const accountClaimMsg         = document.getElementById('account-claim-msg');
+  const accountClosBtn          = document.getElementById('account-close-btn');
 
   const claimOverlay       = document.getElementById('claim-overlay');
   const claimCodeDisplay   = document.getElementById('claim-code-display');
   const claimCodeCopyBtn   = document.getElementById('claim-code-copy-btn');
   const claimCodeOkBtn     = document.getElementById('claim-code-ok-btn');
-
-  const nickDisplay            = document.getElementById('nick-display');
-  const nickError              = document.getElementById('nick-error');
-  const anonError              = document.getElementById('anon-error');
-  const accountChangeNameBtn   = document.getElementById('account-change-name-btn');
-  const accountChangeNameRow   = document.getElementById('account-change-name-row');
-  const accountNewNameInput    = document.getElementById('account-new-name-input');
-  const accountNewNameBtn      = document.getElementById('account-new-name-btn');
-  const accountChangeMsg       = document.getElementById('account-change-msg');
 
   // ── Drag ghost ───────────────────────────────────────────────────────────
   const dragGhost = document.createElement('div');
@@ -283,19 +270,24 @@
     claimOverlay.classList.remove('hidden');
   }
 
-  function openAccountOverlay() {
-    if (playerRegistered && playerClaimCode) {
+  function openAccountOverlay(focusCreate = false) {
+    if (playerRegistered) {
+      accountLoggedIn.style.display = '';
+      accountCreateSection.style.display = 'none';
       accountNicknameDisplay.textContent = cfgNickname.value.trim();
       accountClaimCodeDisplay.textContent = playerClaimCode;
-      accountRegisteredSection.style.display = '';
-      accountUnregisteredSection.style.display = 'none';
+      accountChangeMsg.style.display = 'none';
+      accountNewNameInput.value = '';
     } else {
-      accountRegisteredSection.style.display = 'none';
-      accountUnregisteredSection.style.display = '';
+      accountLoggedIn.style.display = 'none';
+      accountCreateSection.style.display = '';
+      accountCreateMsg.style.display = 'none';
+      accountCreateInput.value = '';
     }
     accountClaimInput.value = '';
     accountClaimMsg.style.display = 'none';
     accountOverlay.classList.remove('hidden');
+    if (focusCreate && !playerRegistered) setTimeout(() => accountCreateInput.focus(), 50);
   }
 
   function getCampaignUnlocked() {
@@ -690,8 +682,9 @@
   }
 
   function openCampaignOverview() {
-    if (!cfgNickname.value.trim()) {
-      cfgNickname.focus();
+    if (!playerRegistered) {
+      pendingCampaignAfterLogin = true;
+      openAccountOverlay(true);
       return;
     }
     const load = () => {
@@ -723,12 +716,7 @@
     introTitle.textContent = lvl.title || `Level ${idx + 1}`;
     introText.textContent = lvl.intro || '';
     introStartBtn.dataset.idx = idx;
-    const hasName = !!cfgNickname.value.trim();
-    if (hasName) hide(introNicknamePrompt); else show(introNicknamePrompt);
-    if (!hasName) introNickname.value = '';
     show(introOverlay);
-    if (!hasName) setTimeout(() => introNickname.focus(), 50);
-    introNickname.onkeydown = e => { if (e.key === 'Enter') introStartBtn.click(); };
   }
 
   function launchCampaignLevel(idx) {
@@ -969,24 +957,8 @@
       });
   });
 
-  // Nickname prompt
-  anonSaveBtn.addEventListener('click', async () => {
-    const name = anonName.value.trim().slice(0, 20);
-    if (!name) { hide(anonPrompt); return; }
-    anonSaveBtn.disabled = true;
-    const result = await registerPlayer(name);
-    anonSaveBtn.disabled = false;
-    if (!result.ok) {
-      anonError.textContent = result.error === 'taken' ? 'Name taken — try another' : 'Error, try again';
-      anonError.style.display = '';
-      return; // don't hide prompt, let user try again
-    }
-    if (pendingSolve) {
-      postSolve(pendingSolve.time);
-      pendingSolve = null;
-    }
-    hide(anonPrompt);
-  });
+  // Anon prompt — open account modal (pendingSolve will be handled after registration)
+  document.getElementById('anon-save-btn').addEventListener('click', () => openAccountOverlay(true));
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   function startTimer() {
@@ -1082,21 +1054,12 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
   setCampaignVisible(false);
-  updateAccountBtn();
   cfgNickname.value = localStorage.getItem(LS.nickname) || '';
-  fetchMe();
   function updateRankedAvailability() {
-    const hasNick = !!cfgNickname.value.trim();
-    cfgRanked.disabled = !hasNick;
-    if (!hasNick) cfgRanked.checked = false;
+    cfgRanked.disabled = !playerRegistered;
+    if (!playerRegistered) cfgRanked.checked = false;
   }
-  cfgNickname.addEventListener('input', updateRankedAvailability);
-  cfgNickname.addEventListener('change', () => {
-    const nick = cfgNickname.value.trim();
-    localStorage.setItem(LS.nickname, nick);
-    updateRankedAvailability();
-    if (nick) registerPlayer(nick);
-  });
+  fetchMe();
 
   cfgNightmare.checked = localStorage.getItem(LS.nightmare) !== 'false';
   cfgRanked.checked = localStorage.getItem(LS.ranked) !== 'false';
@@ -1128,13 +1091,6 @@
   campaignExitBtn.addEventListener('click', exitCampaign);
 
   introStartBtn.addEventListener('click', () => {
-    const name = introNickname.value.trim();
-    if (name) {
-      cfgNickname.value = name;
-      localStorage.setItem(LS.nickname, name);
-      updateRankedAvailability();
-      registerPlayer(name);
-    }
     launchCampaignLevel(parseInt(introStartBtn.dataset.idx || campaignLevel));
   });
   campaignNextBtn.addEventListener('click', () => {
@@ -1146,39 +1102,56 @@
     openCampaignOverview();
   });
   // Account modal
-  accountBtn.addEventListener('click', openAccountOverlay);
-  accountClosBtn.addEventListener('click', () => { accountOverlay.classList.add('hidden'); });
-
-  // Change name flow inside account modal
-  accountChangeNameBtn.addEventListener('click', () => {
-    accountChangeNameRow.style.display = '';
-    accountChangeMsg.style.display = 'none';
-    accountNewNameInput.value = '';
-    accountNewNameInput.focus();
+  accountBtn.addEventListener('click', () => openAccountOverlay());
+  accountClosBtn.addEventListener('click', () => {
+    accountOverlay.classList.add('hidden');
+    pendingCampaignAfterLogin = false;
   });
+
+  // Create account
+  accountCreateBtn.addEventListener('click', async () => {
+    const name = accountCreateInput.value.trim().slice(0, 20);
+    if (!name) return;
+    accountCreateBtn.disabled = true;
+    const result = await registerPlayer(name);
+    accountCreateBtn.disabled = false;
+    if (!result.ok) {
+      if (result.error === 'taken') {
+        accountCreateMsg.textContent = 'Already registered. To claim it, enter your recovery code below.';
+        accountCreateMsg.style.color = '#aaa';
+        setTimeout(() => accountClaimInput.focus(), 50);
+      } else {
+        accountCreateMsg.textContent = 'Error — try again.';
+        accountCreateMsg.style.color = '#e94560';
+      }
+      accountCreateMsg.style.display = '';
+    }
+  });
+  accountCreateInput.addEventListener('keydown', e => { if (e.key === 'Enter') accountCreateBtn.click(); });
+
+  // Change name (registered)
   accountNewNameBtn.addEventListener('click', async () => {
     const newName = accountNewNameInput.value.trim().slice(0, 20);
     if (!newName) return;
     accountNewNameBtn.disabled = true;
     const result = await registerPlayer(newName);
     accountNewNameBtn.disabled = false;
-    if (result.ok) {
-      accountChangeMsg.textContent = 'Name changed!';
-      accountChangeMsg.style.color = '#4ecca3';
-      accountChangeNameRow.style.display = 'none';
-      openAccountOverlay(); // refresh display
-    } else {
+    if (!result.ok) {
       accountChangeMsg.textContent = result.error === 'taken' ? 'Name already taken.' : 'Error, try again.';
       accountChangeMsg.style.color = '#e94560';
+      accountChangeMsg.style.display = '';
     }
-    accountChangeMsg.style.display = '';
+    // On success registerPlayer already closes modal and refreshes; nothing to do here
   });
 
+  // Copy recovery code
   accountCopyBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(playerClaimCode || '').catch(() => {});
     accountCopyBtn.textContent = 'Copied!';
     setTimeout(() => { accountCopyBtn.textContent = 'Copy'; }, 1500);
   });
+
+  // Restore account
   accountClaimBtn.addEventListener('click', async () => {
     const code = accountClaimInput.value.trim().toLowerCase();
     if (!code) return;
@@ -1201,14 +1174,21 @@
         lockNickname();
         updateRankedAvailability();
         updateAccountBtn();
-        openAccountOverlay(); // refresh the modal
-        accountClaimMsg.textContent = 'Account restored!';
-        accountClaimMsg.style.color = '#4ecca3';
+        accountOverlay.classList.add('hidden');
+        if (pendingSolve) {
+          postSolve(pendingSolve.time);
+          pendingSolve = null;
+          hide(anonPrompt);
+        }
+        if (pendingCampaignAfterLogin) {
+          pendingCampaignAfterLogin = false;
+          openCampaignOverview();
+        }
       } else {
         accountClaimMsg.textContent = 'Recovery code not found.';
         accountClaimMsg.style.color = '#e94560';
+        accountClaimMsg.style.display = '';
       }
-      accountClaimMsg.style.display = '';
     } catch {
       accountClaimMsg.textContent = 'Network error.';
       accountClaimMsg.style.color = '#e94560';
@@ -1216,6 +1196,7 @@
     }
     accountClaimBtn.disabled = false;
   });
+  accountClaimInput.addEventListener('keydown', e => { if (e.key === 'Enter') accountClaimBtn.click(); });
 
   // Claim code one-time modal
   claimCodeCopyBtn.addEventListener('click', () => {

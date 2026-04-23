@@ -564,15 +564,12 @@ main {
 #campaign-next-btn { background: #4ecca3; color: #1a1a2e; }
 
 /* ── Account ───────────────────────────────────────────────────────────── */
-.player-label {
+.player-widget {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.82rem;
-  color: #aaa;
 }
 
-/* Name badge shown when registered — replaces the text input */
 .nick-display {
   font-size: 0.82rem;
   color: #4ecca3;
@@ -591,35 +588,23 @@ main {
 
 .account-btn:hover { opacity: 1; color: #eee; }
 
-.nick-error {
-  font-size: 0.75rem;
-  color: #e94560;
-  white-space: nowrap;
-}
-
-.anon-label {
-  color: #666;
-  font-size: 0.8rem;
-}
-
-.anon-error {
-  font-size: 0.78rem;
-  color: #e94560;
-  margin-top: 4px;
-  width: 100%;
-}
-
-.account-change-btn {
+.anon-account-btn {
   background: none;
   border: none;
-  color: #555;
-  font-size: 0.75rem;
-  padding: 0 4px;
+  color: #4ecca3;
+  font-size: 0.8rem;
+  padding: 0;
   cursor: pointer;
-  font-weight: 400;
+  text-decoration: underline;
+  font-weight: 600;
 }
 
-.account-change-btn:hover { color: #aaa; opacity: 1; }
+.anon-account-btn:hover { opacity: 0.8; }
+
+.account-status {
+  color: #aaa;
+  margin-bottom: 12px;
+}
 
 .claim-code-box {
   display: flex;
