@@ -158,6 +158,9 @@
     });
     newGameBtn.textContent = visible ? 'New Game' : 'Free Play';
   }
+  function setCampaignVisible(visible) {
+    campaignIndicator.style.display = visible ? '' : 'none';
+  }
   function getCampaignUnlocked() {
     return parseInt(localStorage.getItem(LS.campaignLevel) || '0');
   }
@@ -601,7 +604,7 @@
 
     setFreePlayVisible(false);
     campaignIndicator.textContent = `Level ${idx + 1} / ${campaignData.levels.length}`;
-    show(campaignIndicator);
+    setCampaignVisible(true);
     hide(campaignBtn);
 
     resetState();
@@ -613,7 +616,7 @@
     hide(campaignOverlay);
     restoreFreePlaySettings();
     setFreePlayVisible(true);
-    hide(campaignIndicator);
+    setCampaignVisible(false);
     show(campaignBtn);
     hide(campaignNextBtn);
     hide(campaignMapBtn);
@@ -925,6 +928,7 @@
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
+  setCampaignVisible(false);
   cfgNickname.value = localStorage.getItem(LS.nickname) || '';
   cfgNickname.addEventListener('change', () => {
     localStorage.setItem(LS.nickname, cfgNickname.value.trim());
@@ -936,7 +940,7 @@
     localStorage.setItem(LS.ranked, cfgRanked.checked);
   });
 
-  newGameBtn.addEventListener('click', () => { restoreFreePlaySettings(); campaignMode = false; setFreePlayVisible(true); newGame(); });
+  newGameBtn.addEventListener('click', () => { restoreFreePlaySettings(); campaignMode = false; setFreePlayVisible(true); setCampaignVisible(false); newGame(); });
   playAgainBtn.addEventListener('click', () => {
     if (campaignMode) { launchCampaignLevel(campaignLevel); }
     else newGame();
