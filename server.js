@@ -206,6 +206,22 @@ function writePlayers(data) {
   fs.writeFileSync(PLAYERS_FILE, JSON.stringify(data, null, 2));
 }
 
+function renameInLeaderboard(oldNick, newNick) {
+  const data = readLeaderboard();
+  let changed = false;
+  for (const entries of Object.values(data.locations)) {
+    for (const entry of entries) {
+      if (entry.nickname === oldNick) { entry.nickname = newNick; changed = true; }
+    }
+  }
+  if (data.wins[oldNick] !== undefined) {
+    data.wins[newNick] = (data.wins[newNick] || 0) + data.wins[oldNick];
+    delete data.wins[oldNick];
+    changed = true;
+  }
+  if (changed) writeLeaderboard(data);
+}
+
 function generateClaimCode() {
   const groups = [];
   for (let g = 0; g < 3; g++) {
@@ -255,10 +271,12 @@ function handleRegister(req, res) {
           res.end(JSON.stringify({ ok: false, error: 'taken' }));
           return;
         }
-        delete players._nicknames[player.nickname];
+        const oldNick = player.nickname;
+        delete players._nicknames[oldNick];
         player.nickname = nick;
         players._nicknames[nick] = token;
         writePlayers(players);
+        renameInLeaderboard(oldNick, nick);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, claimCode: player.claimCode, isNew: false }));
         return;
