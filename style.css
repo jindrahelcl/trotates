@@ -565,16 +565,28 @@ main {
 
 /* ── Account ───────────────────────────────────────────────────────────── */
 .player-label {
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: #aaa;
+}
+
+/* Name badge shown when registered — replaces the text input */
+.nick-display {
+  font-size: 0.82rem;
+  color: #4ecca3;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .account-btn {
-  padding: 3px 7px;
+  padding: 2px 6px;
   background: #0f3460;
   color: #aaa;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   border-radius: 4px;
-  line-height: 1;
+  line-height: 1.4;
 }
 
 .account-btn:hover { opacity: 1; color: #eee; }
@@ -583,6 +595,11 @@ main {
   font-size: 0.75rem;
   color: #e94560;
   white-space: nowrap;
+}
+
+.anon-label {
+  color: #666;
+  font-size: 0.8rem;
 }
 
 .anon-error {

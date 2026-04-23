@@ -101,15 +101,14 @@
   }
 
   function lockNickname() {
-    cfgNickname.readOnly = true;
-    cfgNickname.style.opacity = '0.7';
-    cfgNickname.title = 'Use the ⚙ button to change your name';
+    cfgNickname.style.display = 'none';
+    nickDisplay.textContent = cfgNickname.value.trim();
+    nickDisplay.style.display = '';
   }
 
   function unlockNickname() {
-    cfgNickname.readOnly = false;
-    cfgNickname.style.opacity = '';
-    cfgNickname.title = '';
+    nickDisplay.style.display = 'none';
+    cfgNickname.style.display = '';
   }
 
   function showNickError(msg) {
@@ -226,6 +225,7 @@
   const claimCodeCopyBtn   = document.getElementById('claim-code-copy-btn');
   const claimCodeOkBtn     = document.getElementById('claim-code-ok-btn');
 
+  const nickDisplay            = document.getElementById('nick-display');
   const nickError              = document.getElementById('nick-error');
   const anonError              = document.getElementById('anon-error');
   const accountChangeNameBtn   = document.getElementById('account-change-name-btn');
@@ -275,8 +275,7 @@
   }
 
   function updateAccountBtn() {
-    accountBtn.textContent = playerRegistered ? '✓' : '⚙';
-    accountBtn.title = playerRegistered ? 'Account (registered)' : 'Account';
+    accountBtn.title = playerRegistered ? `Account (${cfgNickname.value.trim()})` : 'Account';
   }
 
   function showClaimOverlay(code) {
