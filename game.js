@@ -747,9 +747,9 @@
     setFreePlayVisible(true);
     setCampaignVisible(false);
     show(campaignBtn);
-    hide(campaignNextBtn);
-    hide(campaignMapBtn);
-    hide(campaignOutro);
+    campaignNextBtn.style.display = 'none';
+    campaignMapBtn.style.display = 'none';
+    campaignOutro.style.display = 'none';
     newGame();
   }
 
@@ -775,17 +775,17 @@
     // Show outro
     if (lvl.outro) {
       campaignOutro.textContent = lvl.outro;
-      show(campaignOutro);
+      campaignOutro.style.display = '';
     }
 
-    hide(admireBtn);
-    hide(playAgainBtn);
+    admireBtn.style.display = 'none';
+    playAgainBtn.style.display = 'none';
     if (!isLast) {
-      show(campaignNextBtn);
+      campaignNextBtn.style.display = '';
     } else {
       winStats.textContent += ' · Campaign complete! 🎉';
     }
-    show(campaignMapBtn);
+    campaignMapBtn.style.display = '';
     campaignLbLoaded = false; // stale after new solve
   }
 
@@ -993,11 +993,11 @@
     timerEl.textContent = '0:00';
     hide(winOverlay);
     hide(anonPrompt);
-    hide(campaignOutro);
-    hide(campaignNextBtn);
-    hide(campaignMapBtn);
-    show(admireBtn);
-    show(playAgainBtn);
+    campaignOutro.style.display = 'none';
+    campaignNextBtn.style.display = 'none';
+    campaignMapBtn.style.display = 'none';
+    admireBtn.style.display = '';
+    playAgainBtn.style.display = '';
     admiring = false;
     gameOver = false;
     dragSrcIdx = null;
