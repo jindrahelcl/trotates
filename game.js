@@ -67,7 +67,7 @@
   let nightmareMode = false;
   let correctPositions = [];
   let hellMode = false;
-  let hellProb = 1;
+  const HELL_PROB = 1;
   let dragSrcIdx = null;
   let suppressClick = false;  // blocks click handler after a drag-drop swap
   let isDragging = false;     // true once movement threshold crossed
@@ -82,7 +82,6 @@
     nightmare:     'mapRotatorNightmare',
     ranked:        'mapRotatorRanked',
     hell:          'mapRotatorHell',
-    hellProb:      'mapRotatorHellProb',
     campaignLevel: 'mapRotatorCampaignLevel',
     token:         'mapRotatorToken',
   };
@@ -173,7 +172,6 @@
   const cfgNightmare = document.getElementById('cfg-nightmare');
   const cfgRanked    = document.getElementById('cfg-ranked');
   const cfgHell      = document.getElementById('cfg-hell');
-  const cfgHellProb  = document.getElementById('cfg-hell-prob');
 
   const campaignBtn        = document.getElementById('campaign-btn');
   const campaignOverlay    = document.getElementById('campaign-overlay');
@@ -257,15 +255,10 @@
   // ── Helpers ───────────────────────────────────────────────────────────────
   function show(el) { el.classList.remove('hidden'); }
   function hide(el) { el.classList.add('hidden'); }
-  function updateHellProbVisibility() {
-    cfgHellProb.closest('label').style.display = cfgHell.checked ? '' : 'none';
-  }
   function setFreePlayVisible(visible) {
     [cfgWidth, cfgHeight, cfgZoom, cfgNightmare, cfgRanked, cfgHell].forEach(el => {
       el.closest('label').style.display = visible ? '' : 'none';
     });
-    if (visible) updateHellProbVisibility();
-    else cfgHellProb.closest('label').style.display = 'none';
     newGameBtn.textContent = visible ? 'New Game' : 'Free Play';
   }
   function setCampaignVisible(visible) {
@@ -416,7 +409,7 @@
     moves++;
     movesEl.textContent = `Moves: ${moves}`;
 
-    if (hellMode && Math.random() < hellProb) {
+    if (hellMode && Math.random() < HELL_PROB) {
       const allCells = grid.querySelectorAll('.tile');
       const candidates = [...Array(tiles.length).keys()].filter(i => i !== a && i !== b);
       if (candidates.length > 0) {
@@ -691,7 +684,7 @@
     savedFreePlay = {
       w: cfgWidth.value, h: cfgHeight.value, z: cfgZoom.value,
       nightmare: cfgNightmare.checked, ranked: cfgRanked.checked,
-      hell: cfgHell.checked, hellProb: cfgHellProb.value,
+      hell: cfgHell.checked,
     };
   }
 
@@ -702,8 +695,7 @@
     cfgZoom.value     = savedFreePlay.z;
     cfgNightmare.checked = savedFreePlay.nightmare;
     cfgRanked.checked    = savedFreePlay.ranked;
-    cfgHell.checked      = savedFreePlay.hell;
-    cfgHellProb.value    = savedFreePlay.hellProb;
+    cfgHell.checked = savedFreePlay.hell;
     savedFreePlay = null;
   }
 
@@ -1036,7 +1028,6 @@
   function startGame() {
     nightmareMode = cfgNightmare.checked;
     hellMode = cfgHell.checked;
-    hellProb = Math.min(1, Math.max(0, parseFloat(cfgHellProb.value) || 0));
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
     const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
     currentZoom = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
@@ -1106,16 +1097,10 @@
     newGame();
   });
 
-  cfgHell.checked     = localStorage.getItem(LS.hell) === 'true';
-  cfgHellProb.value   = localStorage.getItem(LS.hellProb) ?? '1';
-  updateHellProbVisibility();
+  cfgHell.checked = localStorage.getItem(LS.hell) === 'true';
   cfgHell.addEventListener('change', () => {
     localStorage.setItem(LS.hell, cfgHell.checked);
-    updateHellProbVisibility();
     newGame();
-  });
-  cfgHellProb.addEventListener('change', () => {
-    localStorage.setItem(LS.hellProb, cfgHellProb.value);
   });
   admireBtn.addEventListener('click', () => {
     if (pendingSolve) { postSolve(pendingSolve.time); pendingSolve = null; }
