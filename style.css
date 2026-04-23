@@ -579,6 +579,31 @@ main {
 
 .account-btn:hover { opacity: 1; color: #eee; }
 
+.nick-error {
+  font-size: 0.75rem;
+  color: #e94560;
+  white-space: nowrap;
+}
+
+.anon-error {
+  font-size: 0.78rem;
+  color: #e94560;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.account-change-btn {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 0.75rem;
+  padding: 0 4px;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.account-change-btn:hover { color: #aaa; opacity: 1; }
+
 .claim-code-box {
   display: flex;
   align-items: center;

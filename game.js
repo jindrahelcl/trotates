@@ -100,6 +100,24 @@
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` };
   }
 
+  function lockNickname() {
+    cfgNickname.readOnly = true;
+    cfgNickname.style.opacity = '0.7';
+    cfgNickname.title = 'Use the ⚙ button to change your name';
+  }
+
+  function unlockNickname() {
+    cfgNickname.readOnly = false;
+    cfgNickname.style.opacity = '';
+    cfgNickname.title = '';
+  }
+
+  function showNickError(msg) {
+    nickError.textContent = msg;
+    nickError.style.display = '';
+    setTimeout(() => { nickError.style.display = 'none'; }, 4000);
+  }
+
   async function registerPlayer(nickname) {
     try {
       const r = await fetch('/register', {
@@ -111,8 +129,15 @@
       if (data.ok) {
         playerRegistered = true;
         playerClaimCode  = data.claimCode;
+        lockNickname();
         updateAccountBtn();
         if (data.isNew) showClaimOverlay(data.claimCode);
+      } else if (data.error === 'taken') {
+        // Don't silently pretend registration worked
+        cfgNickname.value = '';
+        localStorage.setItem(LS.nickname, '');
+        updateRankedAvailability();
+        showNickError('Name taken');
       }
       return data;
     } catch {
@@ -128,6 +153,7 @@
       if (!data.registered) return;
       playerRegistered = true;
       playerClaimCode  = data.claimCode;
+      lockNickname();
       // Sync nickname: if server has one and local is empty, populate it
       if (data.nickname && !cfgNickname.value.trim()) {
         cfgNickname.value = data.nickname;
@@ -199,6 +225,14 @@
   const claimCodeDisplay   = document.getElementById('claim-code-display');
   const claimCodeCopyBtn   = document.getElementById('claim-code-copy-btn');
   const claimCodeOkBtn     = document.getElementById('claim-code-ok-btn');
+
+  const nickError              = document.getElementById('nick-error');
+  const anonError              = document.getElementById('anon-error');
+  const accountChangeNameBtn   = document.getElementById('account-change-name-btn');
+  const accountChangeNameRow   = document.getElementById('account-change-name-row');
+  const accountNewNameInput    = document.getElementById('account-new-name-input');
+  const accountNewNameBtn      = document.getElementById('account-new-name-btn');
+  const accountChangeMsg       = document.getElementById('account-change-msg');
 
   // ── Drag ghost ───────────────────────────────────────────────────────────
   const dragGhost = document.createElement('div');
@@ -937,13 +971,16 @@
   });
 
   // Nickname prompt
-  anonSaveBtn.addEventListener('click', () => {
+  anonSaveBtn.addEventListener('click', async () => {
     const name = anonName.value.trim().slice(0, 20);
-    if (name) {
-      cfgNickname.value = name;
-      localStorage.setItem(LS.nickname, name);
-      updateRankedAvailability();
-      registerPlayer(name);
+    if (!name) { hide(anonPrompt); return; }
+    anonSaveBtn.disabled = true;
+    const result = await registerPlayer(name);
+    anonSaveBtn.disabled = false;
+    if (!result.ok) {
+      anonError.textContent = result.error === 'taken' ? 'Name taken — try another' : 'Error, try again';
+      anonError.style.display = '';
+      return; // don't hide prompt, let user try again
     }
     if (pendingSolve) {
       postSolve(pendingSolve.time);
@@ -1112,6 +1149,32 @@
   // Account modal
   accountBtn.addEventListener('click', openAccountOverlay);
   accountClosBtn.addEventListener('click', () => { accountOverlay.classList.add('hidden'); });
+
+  // Change name flow inside account modal
+  accountChangeNameBtn.addEventListener('click', () => {
+    accountChangeNameRow.style.display = '';
+    accountChangeMsg.style.display = 'none';
+    accountNewNameInput.value = '';
+    accountNewNameInput.focus();
+  });
+  accountNewNameBtn.addEventListener('click', async () => {
+    const newName = accountNewNameInput.value.trim().slice(0, 20);
+    if (!newName) return;
+    accountNewNameBtn.disabled = true;
+    const result = await registerPlayer(newName);
+    accountNewNameBtn.disabled = false;
+    if (result.ok) {
+      accountChangeMsg.textContent = 'Name changed!';
+      accountChangeMsg.style.color = '#4ecca3';
+      accountChangeNameRow.style.display = 'none';
+      openAccountOverlay(); // refresh display
+    } else {
+      accountChangeMsg.textContent = result.error === 'taken' ? 'Name already taken.' : 'Error, try again.';
+      accountChangeMsg.style.color = '#e94560';
+    }
+    accountChangeMsg.style.display = '';
+  });
+
   accountCopyBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(playerClaimCode || '').catch(() => {});
     accountCopyBtn.textContent = 'Copied!';
@@ -1136,6 +1199,7 @@
         const serverLevel = data.campaignLevel || 0;
         const localLevel  = parseInt(localStorage.getItem(LS.campaignLevel) || '0');
         if (serverLevel > localLevel) localStorage.setItem(LS.campaignLevel, serverLevel);
+        lockNickname();
         updateRankedAvailability();
         updateAccountBtn();
         openAccountOverlay(); // refresh the modal

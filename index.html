@@ -16,6 +16,7 @@
       <label class="player-label">Player
         <input type="text" id="cfg-nickname" placeholder="your name" maxlength="20" autocomplete="off">
         <button id="account-btn" class="account-btn" title="Account"></button>
+        <span id="nick-error" class="nick-error" style="display:none"></span>
       </label>
       <label class="nightmare-label free-play-only"><input type="checkbox" id="cfg-nightmare"> Nightmare</label>
       <label class="free-play-only"><input type="checkbox" id="cfg-ranked"> Ranked</label>
@@ -110,6 +111,7 @@
         Playing as anonymous —
         <input type="text" id="anon-name" placeholder="your name" maxlength="20" autocomplete="off">
         <button id="anon-save-btn">Save</button>
+        <span id="anon-error" class="anon-error" style="display:none"></span>
       </div>
       <p id="campaign-outro" class="campaign-outro hidden"></p>
       <button id="campaign-map-btn" class="share-btn hidden">Campaign Map</button>
@@ -140,7 +142,12 @@
     <div class="overlay-box">
       <h2>Account</h2>
       <div id="account-registered-section" style="display:none">
-        <p>Logged in as <strong id="account-nickname-display"></strong></p>
+        <p>Logged in as <strong id="account-nickname-display"></strong> <button id="account-change-name-btn" class="account-change-btn">Change</button></p>
+        <div id="account-change-name-row" class="claim-input-row" style="display:none">
+          <input type="text" id="account-new-name-input" placeholder="new name" maxlength="20" autocomplete="off">
+          <button id="account-new-name-btn">Save</button>
+        </div>
+        <p id="account-change-msg" class="account-msg" style="display:none"></p>
         <p class="account-section-label">Recovery code:</p>
         <div class="claim-code-box">
           <span id="account-claim-code-display"></span>
