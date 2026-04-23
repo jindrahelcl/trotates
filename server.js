@@ -53,7 +53,6 @@ function serveStatic(res, filePath) {
 }
 
 // ── Limits ────────────────────────────────────────────────────────────────
-const MAX_GRID    = 20;
 const RATE_WINDOW = 60 * 1000;
 const RATE_MAX    = 500;
 
@@ -186,6 +185,202 @@ function handleResolve(res, code) {
   res.end(JSON.stringify(entry));
 }
 
+// ── Players ───────────────────────────────────────────────────────────────
+// players.json: { "<token>": { nickname, claimCode, campaignLevel, createdAt },
+//                 "_nicknames": { "alice": "<token>" },
+//                 "_claimCodes": { "bafoc-emidu-kalev": "<token>" } }
+const PLAYERS_FILE = path.join(__dirname, 'players.json');
+
+function readPlayers() {
+  try {
+    const data = JSON.parse(fs.readFileSync(PLAYERS_FILE, 'utf8'));
+    if (!data._nicknames)  data._nicknames  = {};
+    if (!data._claimCodes) data._claimCodes = {};
+    return data;
+  } catch {
+    return { _nicknames: {}, _claimCodes: {} };
+  }
+}
+
+function writePlayers(data) {
+  fs.writeFileSync(PLAYERS_FILE, JSON.stringify(data, null, 2));
+}
+
+function generateClaimCode() {
+  const groups = [];
+  for (let g = 0; g < 3; g++) {
+    let s = '';
+    for (let i = 0; i < 5; i++)
+      s += i % 2 === 0
+        ? CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)]
+        : VOWELS[Math.floor(Math.random() * VOWELS.length)];
+    groups.push(s);
+  }
+  return groups.join('-');
+}
+
+function extractToken(req) {
+  const auth = req.headers['authorization'] || '';
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : null;
+}
+
+function isValidToken(t) {
+  return typeof t === 'string' && /^[0-9a-f-]{36}$/.test(t);
+}
+
+function handleRegister(req, res) {
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { token, nickname } = JSON.parse(body);
+      const nick = String(nickname || '').trim().slice(0, 20);
+      if (!nick || !isValidToken(token)) throw new Error();
+
+      const players = readPlayers();
+
+      // Token already registered
+      if (players[token]) {
+        const player = players[token];
+        if (player.nickname === nick) {
+          // Idempotent
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, claimCode: player.claimCode, isNew: false }));
+          return;
+        }
+        // Nickname change: check new name not taken by someone else
+        if (players._nicknames[nick] && players._nicknames[nick] !== token) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'taken' }));
+          return;
+        }
+        delete players._nicknames[player.nickname];
+        player.nickname = nick;
+        players._nicknames[nick] = token;
+        writePlayers(players);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, claimCode: player.claimCode, isNew: false }));
+        return;
+      }
+
+      // New token: check nickname availability
+      if (players._nicknames[nick]) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'taken' }));
+        return;
+      }
+
+      let claimCode;
+      let attempts = 0;
+      do {
+        claimCode = generateClaimCode();
+        if (++attempts > 1000) throw new Error('claim code space exhausted');
+      } while (players._claimCodes[claimCode]);
+
+      players[token] = { nickname: nick, claimCode, campaignLevel: 0, createdAt: new Date().toISOString() };
+      players._nicknames[nick] = token;
+      players._claimCodes[claimCode] = token;
+      writePlayers(players);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, claimCode, isNew: true }));
+    } catch {
+      res.writeHead(400);
+      res.end('Bad request');
+    }
+  });
+}
+
+function handleClaim(req, res) {
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { claimCode, newToken } = JSON.parse(body);
+      if (!claimCode || !isValidToken(newToken)) throw new Error();
+
+      const players = readPlayers();
+      const code = String(claimCode).trim().toLowerCase();
+      const oldToken = players._claimCodes[code];
+
+      if (!oldToken) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'not_found' }));
+        return;
+      }
+
+      const player = players[oldToken];
+
+      if (oldToken === newToken) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, nickname: player.nickname, campaignLevel: player.campaignLevel, claimCode: player.claimCode }));
+        return;
+      }
+
+      // If newToken was previously registered under a different name, clean it up
+      if (players[newToken]) {
+        const old = players[newToken];
+        delete players._nicknames[old.nickname];
+        delete players._claimCodes[old.claimCode];
+        delete players[newToken];
+      }
+
+      players[newToken] = player;
+      delete players[oldToken];
+      players._nicknames[player.nickname] = newToken;
+      players._claimCodes[player.claimCode] = newToken;
+      writePlayers(players);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, nickname: player.nickname, campaignLevel: player.campaignLevel, claimCode: player.claimCode }));
+    } catch {
+      res.writeHead(400);
+      res.end('Bad request');
+    }
+  });
+}
+
+function handleGetMe(req, res) {
+  const token = extractToken(req);
+  const players = readPlayers();
+  const player = token && players[token];
+  if (!player) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ registered: false }));
+    return;
+  }
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({
+    registered: true,
+    nickname: player.nickname,
+    campaignLevel: player.campaignLevel,
+    claimCode: player.claimCode,
+  }));
+}
+
+function handleCampaignProgress(req, res) {
+  const token = extractToken(req);
+  if (!token) { res.writeHead(401); res.end(); return; }
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { level } = JSON.parse(body);
+      if (typeof level !== 'number' || level < 0) throw new Error();
+      const players = readPlayers();
+      if (!players[token]) { res.writeHead(401); res.end(); return; }
+      players[token].campaignLevel = Math.max(players[token].campaignLevel || 0, Math.round(level));
+      writePlayers(players);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    } catch {
+      res.writeHead(400);
+      res.end('Bad request');
+    }
+  });
+}
+
 // ── Campaign ──────────────────────────────────────────────────────────────
 const CAMPAIGN_FILE = path.join(__dirname, 'campaign.json');
 
@@ -262,8 +457,22 @@ function handlePostLeaderboard(req, res) {
       const parsed = JSON.parse(body);
       const { time, moves, nickname, loc } = parsed;
       if (typeof time !== 'number' || typeof moves !== 'number') throw new Error();
+      const nick = String(nickname || '').trim().slice(0, 20) || 'anonymous';
+
+      // Verify token if the nickname is registered
+      if (nick !== 'anonymous') {
+        const token = extractToken(req);
+        const players = readPlayers();
+        const registeredToken = players._nicknames[nick];
+        if (registeredToken && registeredToken !== token) {
+          res.writeHead(401);
+          res.end('Unauthorized');
+          return;
+        }
+      }
+
       const entry = {
-        nickname: String(nickname || '').trim().slice(0, 20) || 'anonymous',
+        nickname: nick,
         time:     Math.round(time),
         moves:    Math.round(moves),
         date:     new Date().toISOString(),
@@ -293,12 +502,19 @@ function handlePostLeaderboard(req, res) {
 }
 
 // ── Random played location ────────────────────────────────────────────────
-function handleRandomPlayed(query, res) {
+function handleRandomPlayed(req, query, res) {
   const params = new URLSearchParams(query);
   const z    = parseInt(params.get('z'));
   const w    = parseInt(params.get('w'));
   const h    = parseInt(params.get('h'));
-  const nick = (params.get('nick') || '').trim();
+
+  // Prefer token-based identity; fall back to nick query param
+  const token = extractToken(req);
+  const players = readPlayers();
+  const nick = (token && players[token])
+    ? players[token].nickname
+    : (params.get('nick') || '').trim();
+
   const data = readLeaderboard();
   const suffix = `,${z},${w},${h}`;
   const keys = Object.keys(data.locations).filter(k => {
@@ -347,12 +563,28 @@ const server = http.createServer((req, res) => {
     return handleGetCampaignLeaderboard(res);
   }
 
+  if (url === '/campaign-progress' && req.method === 'POST') {
+    return handleCampaignProgress(req, res);
+  }
+
   if (url === '/random-played' && req.method === 'GET') {
-    return handleRandomPlayed(query, res);
+    return handleRandomPlayed(req, query, res);
   }
 
   if (url === '/shorten' && req.method === 'POST') {
     return handleShorten(req, res);
+  }
+
+  if (url === '/register' && req.method === 'POST') {
+    return handleRegister(req, res);
+  }
+
+  if (url === '/claim' && req.method === 'POST') {
+    return handleClaim(req, res);
+  }
+
+  if (url === '/me' && req.method === 'GET') {
+    return handleGetMe(req, res);
   }
 
   // /resolve/CODE — JSON data endpoint (called by client JS)

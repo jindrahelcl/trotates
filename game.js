@@ -80,7 +80,68 @@
     nightmare:     'mapRotatorNightmare',
     ranked:        'mapRotatorRanked',
     campaignLevel: 'mapRotatorCampaignLevel',
+    token:         'mapRotatorToken',
   };
+
+  // ── Player identity ────────────────────────────────────────────────────────
+  let playerRegistered = false;
+  let playerClaimCode  = null;
+
+  function getToken() {
+    let t = localStorage.getItem(LS.token);
+    if (!t) {
+      t = crypto.randomUUID();
+      localStorage.setItem(LS.token, t);
+    }
+    return t;
+  }
+
+  function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` };
+  }
+
+  async function registerPlayer(nickname) {
+    try {
+      const r = await fetch('/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: getToken(), nickname }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        playerRegistered = true;
+        playerClaimCode  = data.claimCode;
+        updateAccountBtn();
+        if (data.isNew) showClaimOverlay(data.claimCode);
+      }
+      return data;
+    } catch {
+      return { ok: false, error: 'network' };
+    }
+  }
+
+  async function fetchMe() {
+    try {
+      const r = await fetch('/me', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+      if (!r.ok) return;
+      const data = await r.json();
+      if (!data.registered) return;
+      playerRegistered = true;
+      playerClaimCode  = data.claimCode;
+      // Sync nickname: if server has one and local is empty, populate it
+      if (data.nickname && !cfgNickname.value.trim()) {
+        cfgNickname.value = data.nickname;
+        localStorage.setItem(LS.nickname, data.nickname);
+        updateRankedAvailability();
+      }
+      // Sync campaign level: server wins if ahead
+      const localLevel = parseInt(localStorage.getItem(LS.campaignLevel) || '0');
+      if (data.campaignLevel > localLevel) {
+        localStorage.setItem(LS.campaignLevel, data.campaignLevel);
+      }
+      updateAccountBtn();
+    } catch {}
+  }
 
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const cfgWidth    = document.getElementById('cfg-width');
@@ -122,6 +183,23 @@
   const anonSaveBtn = document.getElementById('anon-save-btn');
   const mapyLink    = document.getElementById('mapy-link');
 
+  const accountBtn           = document.getElementById('account-btn');
+  const accountOverlay       = document.getElementById('account-overlay');
+  const accountNicknameDisplay = document.getElementById('account-nickname-display');
+  const accountClaimCodeDisplay = document.getElementById('account-claim-code-display');
+  const accountCopyBtn       = document.getElementById('account-copy-btn');
+  const accountClaimInput    = document.getElementById('account-claim-input');
+  const accountClaimBtn      = document.getElementById('account-claim-btn');
+  const accountClaimMsg      = document.getElementById('account-claim-msg');
+  const accountClosBtn       = document.getElementById('account-close-btn');
+  const accountRegisteredSection   = document.getElementById('account-registered-section');
+  const accountUnregisteredSection = document.getElementById('account-unregistered-section');
+
+  const claimOverlay       = document.getElementById('claim-overlay');
+  const claimCodeDisplay   = document.getElementById('claim-code-display');
+  const claimCodeCopyBtn   = document.getElementById('claim-code-copy-btn');
+  const claimCodeOkBtn     = document.getElementById('claim-code-ok-btn');
+
   // ── Drag ghost ───────────────────────────────────────────────────────────
   const dragGhost = document.createElement('div');
   dragGhost.className = 'drag-ghost';
@@ -161,6 +239,32 @@
   function setCampaignVisible(visible) {
     campaignIndicator.style.display = visible ? '' : 'none';
   }
+
+  function updateAccountBtn() {
+    accountBtn.textContent = playerRegistered ? '✓' : '⚙';
+    accountBtn.title = playerRegistered ? 'Account (registered)' : 'Account';
+  }
+
+  function showClaimOverlay(code) {
+    claimCodeDisplay.textContent = code;
+    claimOverlay.classList.remove('hidden');
+  }
+
+  function openAccountOverlay() {
+    if (playerRegistered && playerClaimCode) {
+      accountNicknameDisplay.textContent = cfgNickname.value.trim();
+      accountClaimCodeDisplay.textContent = playerClaimCode;
+      accountRegisteredSection.style.display = '';
+      accountUnregisteredSection.style.display = 'none';
+    } else {
+      accountRegisteredSection.style.display = 'none';
+      accountUnregisteredSection.style.display = '';
+    }
+    accountClaimInput.value = '';
+    accountClaimMsg.style.display = 'none';
+    accountOverlay.classList.remove('hidden');
+  }
+
   function getCampaignUnlocked() {
     return parseInt(localStorage.getItem(LS.campaignLevel) || '0');
   }
@@ -553,6 +657,10 @@
   }
 
   function openCampaignOverview() {
+    if (!cfgNickname.value.trim()) {
+      cfgNickname.focus();
+      return;
+    }
     const load = () => {
       const unlocked = getCampaignUnlocked();
       if (!campaignMode) saveFreePlaySettings();
@@ -632,7 +740,15 @@
 
     // Unlock next level
     if (campaignLevel >= unlocked) {
-      localStorage.setItem(LS.campaignLevel, isLast ? unlocked : nextIdx);
+      const newLevel = isLast ? unlocked : nextIdx;
+      localStorage.setItem(LS.campaignLevel, newLevel);
+      if (playerRegistered) {
+        fetch('/campaign-progress', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ level: newLevel }),
+        }).catch(() => {});
+      }
     }
 
     // Show outro
@@ -708,7 +824,7 @@
     const nickname = cfgNickname.value.trim() || 'anonymous';
     fetch('/leaderboard', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ time, moves, width: cols, height: rows, zoom: currentZoom, nickname, loc: currentLocKey, campaign: campaignMode }),
     })
       .then(r => r.json())
@@ -826,6 +942,8 @@
     if (name) {
       cfgNickname.value = name;
       localStorage.setItem(LS.nickname, name);
+      updateRankedAvailability();
+      registerPlayer(name);
     }
     if (pendingSolve) {
       postSolve(pendingSolve.time);
@@ -914,8 +1032,7 @@
       const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
       const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
       const zoom = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
-      const nick = encodeURIComponent(cfgNickname.value.trim());
-      fetch(`/random-played?w=${cols}&h=${rows}&z=${zoom}&nick=${nick}`)
+      fetch(`/random-played?w=${cols}&h=${rows}&z=${zoom}`, { headers: { 'Authorization': `Bearer ${getToken()}` } })
         .then(r => r.json())
         .then(data => {
           if (data.tx !== null) pendingTile = { tx: data.tx, ty: data.ty };
@@ -929,9 +1046,20 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
   setCampaignVisible(false);
+  updateAccountBtn();
   cfgNickname.value = localStorage.getItem(LS.nickname) || '';
+  fetchMe();
+  function updateRankedAvailability() {
+    const hasNick = !!cfgNickname.value.trim();
+    cfgRanked.disabled = !hasNick;
+    if (!hasNick) cfgRanked.checked = false;
+  }
+  cfgNickname.addEventListener('input', updateRankedAvailability);
   cfgNickname.addEventListener('change', () => {
-    localStorage.setItem(LS.nickname, cfgNickname.value.trim());
+    const nick = cfgNickname.value.trim();
+    localStorage.setItem(LS.nickname, nick);
+    updateRankedAvailability();
+    if (nick) registerPlayer(nick);
   });
 
   cfgNightmare.checked = localStorage.getItem(LS.nightmare) !== 'false';
@@ -939,6 +1067,7 @@
   cfgRanked.addEventListener('change', () => {
     localStorage.setItem(LS.ranked, cfgRanked.checked);
   });
+  updateRankedAvailability();
 
   newGameBtn.addEventListener('click', () => { restoreFreePlaySettings(); campaignMode = false; setFreePlayVisible(true); setCampaignVisible(false); newGame(); });
   playAgainBtn.addEventListener('click', () => {
@@ -967,6 +1096,8 @@
     if (name) {
       cfgNickname.value = name;
       localStorage.setItem(LS.nickname, name);
+      updateRankedAvailability();
+      registerPlayer(name);
     }
     launchCampaignLevel(parseInt(introStartBtn.dataset.idx || campaignLevel));
   });
@@ -978,6 +1109,59 @@
     hide(winOverlay);
     openCampaignOverview();
   });
+  // Account modal
+  accountBtn.addEventListener('click', openAccountOverlay);
+  accountClosBtn.addEventListener('click', () => { accountOverlay.classList.add('hidden'); });
+  accountCopyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(playerClaimCode || '').catch(() => {});
+    accountCopyBtn.textContent = 'Copied!';
+    setTimeout(() => { accountCopyBtn.textContent = 'Copy'; }, 1500);
+  });
+  accountClaimBtn.addEventListener('click', async () => {
+    const code = accountClaimInput.value.trim().toLowerCase();
+    if (!code) return;
+    accountClaimBtn.disabled = true;
+    try {
+      const r = await fetch('/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claimCode: code, newToken: getToken() }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        playerRegistered = true;
+        playerClaimCode  = data.claimCode;
+        cfgNickname.value = data.nickname;
+        localStorage.setItem(LS.nickname, data.nickname);
+        const serverLevel = data.campaignLevel || 0;
+        const localLevel  = parseInt(localStorage.getItem(LS.campaignLevel) || '0');
+        if (serverLevel > localLevel) localStorage.setItem(LS.campaignLevel, serverLevel);
+        updateRankedAvailability();
+        updateAccountBtn();
+        openAccountOverlay(); // refresh the modal
+        accountClaimMsg.textContent = 'Account restored!';
+        accountClaimMsg.style.color = '#4ecca3';
+      } else {
+        accountClaimMsg.textContent = 'Recovery code not found.';
+        accountClaimMsg.style.color = '#e94560';
+      }
+      accountClaimMsg.style.display = '';
+    } catch {
+      accountClaimMsg.textContent = 'Network error.';
+      accountClaimMsg.style.color = '#e94560';
+      accountClaimMsg.style.display = '';
+    }
+    accountClaimBtn.disabled = false;
+  });
+
+  // Claim code one-time modal
+  claimCodeCopyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(claimCodeDisplay.textContent).catch(() => {});
+    claimCodeCopyBtn.textContent = 'Copied!';
+    setTimeout(() => { claimCodeCopyBtn.textContent = 'Copy'; }, 1500);
+  });
+  claimCodeOkBtn.addEventListener('click', () => { claimOverlay.classList.add('hidden'); });
+
   window.addEventListener('resize', () => {
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value) || 4));
     render(cols);

@@ -563,6 +563,120 @@ main {
 
 #campaign-next-btn { background: #4ecca3; color: #1a1a2e; }
 
+/* ── Account ───────────────────────────────────────────────────────────── */
+.player-label {
+  position: relative;
+}
+
+.account-btn {
+  padding: 3px 7px;
+  background: #0f3460;
+  color: #aaa;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.account-btn:hover { opacity: 1; color: #eee; }
+
+.claim-code-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f3460;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0 16px;
+  font-family: monospace;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  color: #4ecca3;
+  justify-content: center;
+}
+
+.claim-code-box button {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  background: #1a1a2e;
+  color: #aaa;
+}
+
+.claim-code-note {
+  font-size: 0.78rem;
+  color: #555;
+  margin-bottom: 16px;
+}
+
+.account-section-label {
+  font-size: 0.82rem;
+  color: #666;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.account-note {
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.account-restore-section {
+  border-top: 1px solid #0f3460;
+  padding-top: 14px;
+  margin-top: 4px;
+  margin-bottom: 14px;
+}
+
+.claim-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.claim-input-row input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #eee;
+  font-size: 0.85rem;
+  font-family: monospace;
+}
+
+.claim-input-row input:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.claim-input-row button {
+  padding: 6px 14px;
+  background: #0f3460;
+  color: #eee;
+  font-size: 0.85rem;
+}
+
+.account-msg {
+  font-size: 0.82rem;
+  margin-top: 8px;
+  text-align: left;
+}
+
+#account-close-btn {
+  width: 100%;
+  background: #0f3460;
+  color: #eee;
+  padding: 10px;
+}
+
+#claim-code-ok-btn {
+  width: 100%;
+  background: #e94560;
+  color: #fff;
+  padding: 10px;
+  font-size: 1rem;
+}
+
 .cz-outline { fill: #1a2744; stroke: #4ecca3; stroke-width: 1; }
 .cz-route   { fill: none; stroke: #4ecca355; stroke-width: 1.5; stroke-dasharray: 4 3; }
 .pin-done   { fill: #4ecca3; }

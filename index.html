@@ -13,7 +13,10 @@
       <label class="free-play-only">W <input type="number" id="cfg-width" value="4" min="1" max="20"></label>
       <label class="free-play-only">H <input type="number" id="cfg-height" value="4" min="1" max="20"></label>
       <label class="free-play-only">Zoom <input type="number" id="cfg-zoom" value="15" min="5" max="19"></label>
-      <label>Player <input type="text" id="cfg-nickname" placeholder="your name" maxlength="20" autocomplete="off"></label>
+      <label class="player-label">Player
+        <input type="text" id="cfg-nickname" placeholder="your name" maxlength="20" autocomplete="off">
+        <button id="account-btn" class="account-btn" title="Account"></button>
+      </label>
       <label class="nightmare-label free-play-only"><input type="checkbox" id="cfg-nightmare"> Nightmare</label>
       <label class="free-play-only"><input type="checkbox" id="cfg-ranked"> Ranked</label>
       <span id="timer">0:00</span>
@@ -115,6 +118,47 @@
         <button id="play-again-btn">Play Again</button>
         <button id="campaign-next-btn" class="hidden">Next Level →</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Shown once after first registration -->
+  <div id="claim-overlay" class="overlay hidden">
+    <div class="overlay-box">
+      <h2>Account Created</h2>
+      <p>Save this recovery code to restore your progress on another device:</p>
+      <div class="claim-code-box">
+        <span id="claim-code-display"></span>
+        <button id="claim-code-copy-btn">Copy</button>
+      </div>
+      <p class="claim-code-note">You can always retrieve this code from the account button (⚙) next to your name.</p>
+      <button id="claim-code-ok-btn">Got it</button>
+    </div>
+  </div>
+
+  <!-- Account settings -->
+  <div id="account-overlay" class="overlay hidden">
+    <div class="overlay-box">
+      <h2>Account</h2>
+      <div id="account-registered-section" style="display:none">
+        <p>Logged in as <strong id="account-nickname-display"></strong></p>
+        <p class="account-section-label">Recovery code:</p>
+        <div class="claim-code-box">
+          <span id="account-claim-code-display"></span>
+          <button id="account-copy-btn">Copy</button>
+        </div>
+      </div>
+      <div id="account-unregistered-section" style="display:none">
+        <p class="account-note">Set a player name to create an account.</p>
+      </div>
+      <div class="account-restore-section">
+        <p class="account-section-label">Restore account on another device:</p>
+        <div class="claim-input-row">
+          <input type="text" id="account-claim-input" placeholder="bafoc-emidu-kalev" autocomplete="off" spellcheck="false">
+          <button id="account-claim-btn">Restore</button>
+        </div>
+        <p id="account-claim-msg" class="account-msg" style="display:none"></p>
+      </div>
+      <button id="account-close-btn">Close</button>
     </div>
   </div>
 
