@@ -1,7 +1,7 @@
 'use strict';
 
 const ZOOM   = 15;
-const CENTER = { x: 17694, y: 11097 }; // Prague Castle
+const CENTER = { x: 17692, y: 11099 };
 
 (function () {
   const grid = document.getElementById('tile-grid');
@@ -10,8 +10,8 @@ const CENTER = { x: 17694, y: 11097 }; // Prague Castle
   const style  = getComputedStyle(document.documentElement);
   const cols   = parseInt(style.getPropertyValue('--grid-cols')) || 4;
   const rows   = parseInt(style.getPropertyValue('--grid-rows')) || 4;
-  const startX = CENTER.x - Math.floor(cols / 2);
-  const startY = CENTER.y - Math.floor(rows / 2);
+  const startX = CENTER.x - 3;           // fixed 3 cols left of Prague
+  const startY = CENTER.y - (rows - 3);  // leaves 2 rows below Prague
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {

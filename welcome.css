@@ -5,9 +5,9 @@
 }
 
 :root {
-  --tile-size: clamp(96px, 13vw, 200px);
-  --grid-cols: 4;
-  --grid-rows: 4;
+  --tile-size: clamp(120px, 18vw, 240px);
+  --grid-cols: 9;
+  --grid-rows: 8;
   --accent: #e94560;
   --accent2: #4ecca3;
   --bg: #1a1a2e;
@@ -29,7 +29,8 @@ body {
 
 .welcome-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .welcome-auth {
@@ -58,7 +59,7 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at center, transparent 30%, var(--bg) 80%);
+    radial-gradient(ellipse at center, transparent 20%, var(--bg) 95%);
   pointer-events: none;
 }
 
@@ -237,7 +238,7 @@ body {
   grid-template-rows: repeat(var(--grid-rows), var(--tile-size));
   transform-style: preserve-3d;
   gap: 2px;
-  animation: grid-drift 28s ease-in-out infinite;
+  animation: grid-drift 60s ease-in-out infinite;
 }
 
 .tile-cell {
@@ -270,8 +271,8 @@ body {
   }
 
   :root {
-    --tile-size: 72px;
-    --grid-cols: 4;
-    --grid-rows: 3;
+    --tile-size: 80px;
+    --grid-cols: 5;
+    --grid-rows: 4;
   }
 }
