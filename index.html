@@ -160,18 +160,13 @@
 
         <div class="auth-divider"><span>or</span></div>
         <div id="google-signin-btn"></div>
+        <button id="auth-skip-btn" class="auth-skip-btn">Play without account</button>
       </div>
 
       <!-- Shown when logged in -->
       <div id="account-panel" style="display:none">
         <h2>Account</h2>
         <p class="account-status">Signed in as <strong id="account-nickname-display"></strong></p>
-        <p class="account-section-label">Change name</p>
-        <div class="claim-input-row">
-          <input type="text" id="account-new-name-input" placeholder="new name" maxlength="20" autocomplete="off">
-          <button id="account-new-name-btn">Save</button>
-        </div>
-        <p id="account-change-msg" class="account-msg" style="display:none"></p>
         <button id="auth-signout-btn" class="auth-signout-btn">Sign out</button>
       </div>
 

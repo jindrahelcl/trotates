@@ -695,47 +695,35 @@ main {
   min-height: 44px;
 }
 
+.auth-skip-btn {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 0.8rem;
+  padding: 10px 0 0;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+}
+
+.auth-skip-btn:hover { color: #888; }
+
+.battle-nudge {
+  font-size: 0.78rem;
+  color: #e94560;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.battle-nudge:hover { opacity: 0.8; }
+
 /* Account panel (logged in) */
 .account-status {
   color: #aaa;
   margin-bottom: 16px;
 }
 
-.account-section-label {
-  font-size: 0.82rem;
-  color: #666;
-  margin-bottom: 4px;
-  text-align: left;
-}
-
-.claim-input-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  margin-bottom: 4px;
-}
-
-.claim-input-row input {
-  flex: 1;
-  padding: 6px 10px;
-  border-radius: 5px;
-  border: 1px solid #0f3460;
-  background: #1a1a2e;
-  color: #eee;
-  font-size: 0.85rem;
-}
-
-.claim-input-row input:focus {
-  outline: none;
-  border-color: #4ecca3;
-}
-
-.claim-input-row button {
-  padding: 6px 14px;
-  background: #0f3460;
-  color: #eee;
-  font-size: 0.85rem;
-}
 
 .account-msg {
   font-size: 0.82rem;

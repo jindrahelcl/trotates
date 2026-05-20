@@ -102,7 +102,15 @@
   }
 
   function lockNickname() {
-    nickDisplay.textContent = cfgNickname.value.trim();
+    if (playerRegistered) {
+      nickDisplay.textContent = cfgNickname.value.trim();
+      nickDisplay.className = 'nick-display';
+      nickDisplay.onclick = null;
+    } else {
+      nickDisplay.textContent = 'Sign in to join the battle!';
+      nickDisplay.className = 'nick-display battle-nudge';
+      nickDisplay.onclick = () => openAccountOverlay();
+    }
   }
 
   function onAuthSuccess({ token, nickname }) {
@@ -189,9 +197,6 @@
   const authPanel              = document.getElementById('auth-panel');
   const accountPanel           = document.getElementById('account-panel');
   const accountNicknameDisplay = document.getElementById('account-nickname-display');
-  const accountNewNameInput    = document.getElementById('account-new-name-input');
-  const accountNewNameBtn      = document.getElementById('account-new-name-btn');
-  const accountChangeMsg       = document.getElementById('account-change-msg');
   const accountCloseBtn        = document.getElementById('account-close-btn');
 
   // ── Drag ghost ───────────────────────────────────────────────────────────
@@ -1037,7 +1042,7 @@
     cfgRanked.disabled = !playerRegistered;
     if (!playerRegistered) cfgRanked.checked = false;
   }
-  fetchMe();
+  lockNickname();
 
   cfgNightmare.checked = localStorage.getItem(LS.nightmare) !== 'false';
   cfgRanked.checked = localStorage.getItem(LS.ranked) !== 'false';
@@ -1214,38 +1219,6 @@
     pendingCampaignAfterAuth = false;
   });
 
-  // Change name (when logged in)
-  accountNewNameBtn.addEventListener('click', async () => {
-    const newName = accountNewNameInput.value.trim().slice(0, 20);
-    if (!newName) return;
-    accountNewNameBtn.disabled = true;
-    try {
-      const r = await fetch('/account/rename', {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ nickname: newName }),
-      });
-      const data = await r.json();
-      if (data.ok) {
-        setJWT(data.token);
-        cfgNickname.value = newName;
-        localStorage.setItem(LS.nickname, newName);
-        lockNickname();
-        updateAccountBtn();
-        accountNicknameDisplay.textContent = newName;
-        accountChangeMsg.textContent = 'Name updated.';
-        accountChangeMsg.style.color = '#4ecca3';
-        accountChangeMsg.style.display = '';
-        accountNewNameInput.value = '';
-      } else {
-        const msgs = { nickname_taken: 'Name already taken.', nickname_invalid: 'Name must be 2–20 characters.' };
-        showAuthMsg('account-change-msg', msgs[data.error] || 'Error — try again.');
-      }
-    } catch { showAuthMsg('account-change-msg', 'Network error.'); }
-    accountNewNameBtn.disabled = false;
-  });
-  accountNewNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') accountNewNameBtn.click(); });
-
   // Sign out
   document.getElementById('auth-signout-btn').addEventListener('click', () => {
     clearJWT();
@@ -1258,9 +1231,19 @@
     accountOverlay.classList.add('hidden');
   });
 
+  // Skip login
+  document.getElementById('auth-skip-btn').addEventListener('click', () => {
+    accountOverlay.classList.add('hidden');
+  });
+
   window.addEventListener('resize', () => {
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value) || 4));
     render(cols);
+  });
+
+  // Show auth modal on load if not logged in (after fetchMe settles)
+  fetchMe().then(() => {
+    if (!playerRegistered) openAccountOverlay();
   });
 
   // Resolve short URL on page load
