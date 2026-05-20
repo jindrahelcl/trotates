@@ -1,0 +1,12 @@
+{
+  "name": "trotates",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server.js",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.4.3",
+    "google-auth-library": "^9.7.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

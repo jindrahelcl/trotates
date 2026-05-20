@@ -2,3 +2,6 @@
 leaderboard.json
 shorts.json
 campaign.json
+players.json
+node_modules/
+*.db
