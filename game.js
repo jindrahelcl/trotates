@@ -1239,9 +1239,12 @@
     render(cols);
   });
 
-  // Redirect to welcome page if not logged in
+  // Redirect to welcome page if not logged in (unless user explicitly skipped)
   fetchMe().then(() => {
-    if (!playerRegistered) location.href = '/welcome?next=' + encodeURIComponent(location.pathname + location.search);
+    if (!playerRegistered && !sessionStorage.getItem('mapRotatorSkip')) {
+      const here = location.pathname + location.search;
+      location.href = '/welcome' + (here === '/' ? '' : '?next=' + encodeURIComponent(here));
+    }
   });
 
   // Resolve short URL on page load

@@ -33,20 +33,18 @@ function buildGrid() {
 function scheduleSpin(grid) {
   const cells = Array.from(grid.children);
 
-  function spinOne() {
-    const cell = cells[Math.floor(Math.random() * cells.length)];
-    const deg  = (Math.floor(Math.random() * 3) + 1) * 90;
-    const cur  = parseInt(cell.dataset.rot || '0');
+  function spinCell(cell) {
+    const deg = (Math.floor(Math.random() * 3) + 1) * 90;
+    const cur = parseInt(cell.dataset.rot || '0');
     const next = cur + deg;
     cell.dataset.rot = next;
-    cell.style.transform = `rotateY(${next}deg)`;
-
-    setTimeout(spinOne, 400 + Math.random() * 800);
+    cell.style.transform = `rotateZ(${next}deg)`;
+    setTimeout(() => spinCell(cell), 2500 + Math.random() * 4000);
   }
 
-  // stagger initial spins across the grid
-  cells.forEach((_, i) => {
-    setTimeout(spinOne, i * 120 + Math.random() * 300);
+  // stagger start so they don't all fire at once
+  cells.forEach((cell, i) => {
+    setTimeout(() => spinCell(cell), i * 250 + Math.random() * 800);
   });
 }
 
@@ -183,4 +181,7 @@ function initGoogle() {
 
 // ── Skip ──────────────────────────────────────────────────────────────────
 
-document.getElementById('auth-skip-btn').addEventListener('click', redirect);
+document.getElementById('auth-skip-btn').addEventListener('click', () => {
+  sessionStorage.setItem('mapRotatorSkip', '1');
+  redirect();
+});
