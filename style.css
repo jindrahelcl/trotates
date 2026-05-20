@@ -214,6 +214,7 @@ main {
 }
 
 .overlay-box {
+  position: relative;
   background: #16213e;
   border-radius: 12px;
   padding: 32px 28px;
