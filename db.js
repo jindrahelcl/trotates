@@ -66,6 +66,10 @@ const stmts = {
     VALUES (@tx, @ty, @zoom, @ownerId, datetime('now'), @bonus)
   `),
   getOwnerTileCount: db.prepare('SELECT COUNT(*) as count FROM tiles WHERE owner_id = ?'),
+  getAllTiles: db.prepare(
+    'SELECT tiles.*, players.nickname as owner_nickname FROM tiles ' +
+    'JOIN players ON tiles.owner_id = players.id'
+  ),
 };
 
 function findById(id)           { return stmts.byId.get(id) || null; }
@@ -110,6 +114,7 @@ function claimTile(tx, ty, zoom, ownerId, bonus) {
   return stmts.claimTile.run({ tx, ty, zoom, ownerId, bonus: bonus || null });
 }
 function getOwnerTileCount(ownerId)      { return stmts.getOwnerTileCount.get(ownerId).count; }
+function getAllTiles()                    { return stmts.getAllTiles.all(); }
 
 // ── Migration from players.json ───────────────────────────────────────────────
 
@@ -157,4 +162,5 @@ module.exports = {
   getTilesInBbox,
   claimTile,
   getOwnerTileCount,
+  getAllTiles,
 };

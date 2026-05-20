@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Rotator — Map</title>
+  <link rel="stylesheet" href="/map.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <a href="/" class="sidebar-brand">Map<span>Rotator</span></a>
+      <ul class="sidebar-nav">
+        <li><a href="/map" class="sidebar-link active">Map</a></li>
+        <li><a href="/profile" class="sidebar-link">Profile</a></li>
+        <li><a href="/" class="sidebar-link">Play</a></li>
+      </ul>
+    </nav>
+
+    <!-- Content -->
+    <main class="content">
+
+      <!-- Global view -->
+      <div id="view-global" class="map-view">
+        <div class="view-header">
+          <h1 class="view-title">Czechia</h1>
+          <p class="view-subtitle">Click a region to zoom in</p>
+        </div>
+        <div class="global-container">
+          <svg id="global-svg" class="global-svg"></svg>
+        </div>
+      </div>
+
+      <!-- Regional view -->
+      <div id="view-regional" class="map-view hidden">
+        <div class="view-header">
+          <button id="back-btn" class="back-btn">← Overview</button>
+          <h1 class="view-title" id="regional-title">Region</h1>
+        </div>
+        <div class="regional-container">
+          <canvas id="regional-canvas" width="480" height="480"></canvas>
+          <div id="regional-legend" class="regional-legend"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="/map.js"></script>
+</body>
+</html>

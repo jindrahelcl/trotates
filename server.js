@@ -512,6 +512,38 @@ function handleWorldTiles(query, res) {
   jsonOk(res, tiles);
 }
 
+// CZ tile bounds at zoom 15 (derived from CZ_BBOX)
+const CZ_TX_MIN = 17483;
+const CZ_TY_MIN = 10950;
+
+function handleWorldOverview(query, res) {
+  const p        = new URLSearchParams(query);
+  const cellSize = Math.min(64, Math.max(1, parseInt(p.get('cellSize')) || 16));
+  const tiles    = db.getAllTiles();
+
+  const cells = {};
+  for (const t of tiles) {
+    const cx  = Math.floor((t.tx - CZ_TX_MIN) / cellSize);
+    const cy  = Math.floor((t.ty - CZ_TY_MIN) / cellSize);
+    const key = `${cx},${cy}`;
+    if (!cells[key]) cells[key] = { cellX: cx, cellY: cy, owners: {} };
+    cells[key].owners[t.owner_nickname] = (cells[key].owners[t.owner_nickname] || 0) + 1;
+  }
+
+  const result = Object.values(cells).map(cell => {
+    const entries = Object.entries(cell.owners).sort((a, b) => b[1] - a[1]);
+    return {
+      cellX:     cell.cellX,
+      cellY:     cell.cellY,
+      owner:     entries[0][0],
+      count:     entries[0][1],
+      contested: entries.length > 1,
+    };
+  });
+
+  jsonOk(res, result);
+}
+
 function handleWorldClaim(req, res) {
   const player = auth.requireAuth(req, res);
   if (!player) return;
@@ -543,7 +575,7 @@ function handleWorldClaim(req, res) {
 const TILE_RE    = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
 const SHORT_RE   = /^\/s\/([a-z]{10})$/;  // page route — serves index.html
 const RESOLVE_RE = /^\/resolve\/([a-z]{10})$/;  // JSON API — returns tile coords
-const STATIC_FILES = new Set(['index.html', 'style.css', 'game.js', 'welcome.html', 'welcome.css', 'welcome.js', 'tiles-anim.js', 'profile.html', 'profile.css', 'profile.js']);
+const STATIC_FILES = new Set(['index.html', 'style.css', 'game.js', 'welcome.html', 'welcome.css', 'welcome.js', 'tiles-anim.js', 'profile.html', 'profile.css', 'profile.js', 'map.html', 'map.css', 'map.js']);
 
 const server = http.createServer((req, res) => {
   const qIdx  = req.url.indexOf('?');
@@ -606,6 +638,10 @@ const server = http.createServer((req, res) => {
     return handleWorldClaim(req, res);
   }
 
+  if (url.startsWith('/world/overview') && req.method === 'GET') {
+    return handleWorldOverview(query, res);
+  }
+
   // /resolve/CODE — JSON data endpoint (called by client JS)
   const resolveMatch = url.match(RESOLVE_RE);
   if (resolveMatch && req.method === 'GET') {
@@ -633,6 +669,11 @@ const server = http.createServer((req, res) => {
 
   if (url === '/profile') {
     serveStatic(res, path.join(__dirname, 'profile.html'));
+    return;
+  }
+
+  if (url === '/map') {
+    serveStatic(res, path.join(__dirname, 'map.html'));
     return;
   }
 
