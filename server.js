@@ -252,6 +252,8 @@ function handleProfileStats(req, res) {
     nickname:      player.nickname,
     campaignLevel: player.campaign_level,
     createdAt:     player.created_at,
+    email:         player.email || null,
+    googleLinked:  !!player.google_id,
     solves,
     wins,
   });

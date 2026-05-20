@@ -212,6 +212,30 @@ body {
 .input-row button:hover { background: #1a3a6e; }
 .input-row button:disabled { opacity: 0.5; cursor: default; }
 
+.account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 360px;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.account-label {
+  width: 60px;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.account-value { color: #ccc; }
+.account-value.linked   { color: var(--accent2); }
+.account-value.unlinked { color: #555; }
+
 .field-msg {
   margin-top: 8px;
   font-size: 0.83rem;

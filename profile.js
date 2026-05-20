@@ -30,6 +30,11 @@ async function init() {
   document.getElementById('member-since').textContent =
     'Member since ' + new Date(data.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long' });
 
+  // Account info
+  document.getElementById('info-email').textContent  = data.email || '—';
+  document.getElementById('info-google').textContent = data.googleLinked ? '✓ Linked' : 'Not linked';
+  document.getElementById('info-google').className   = 'account-value' + (data.googleLinked ? ' linked' : ' unlinked');
+
   // Stats
   document.getElementById('stat-solves').textContent   = data.solves;
   document.getElementById('stat-wins').textContent     = data.wins;
