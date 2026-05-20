@@ -451,40 +451,6 @@ function handleRandomPlayed(req, query, res) {
 
 // ── World / territory ─────────────────────────────────────────────────────
 
-const CZ_POLYGON = [
-  [50.35, 12.09], [50.75, 12.20], [51.00, 12.65],
-  [51.06, 13.50], [51.05, 14.35], [50.85, 15.00],
-  [50.80, 15.80], [50.60, 16.40], [50.42, 16.80],
-  [50.42, 18.01], [50.10, 18.55], [49.57, 18.87],
-  [49.30, 18.30], [49.10, 18.10], [48.85, 17.50],
-  [48.56, 16.96], [48.65, 16.00], [48.85, 15.75],
-  [48.85, 15.20], [48.56, 14.80], [48.75, 13.80],
-  [49.00, 13.40], [49.20, 13.10], [49.55, 12.80],
-  [49.95, 12.14], [50.35, 12.09],
-];
-
-function insidePolygon(lat, lng, poly) {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [yi, xi] = poly[i];
-    const [yj, xj] = poly[j];
-    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi))
-      inside = !inside;
-  }
-  return inside;
-}
-
-function tileCenter(tx, ty, zoom) {
-  const n   = Math.pow(2, zoom);
-  const lng = (tx + 0.5) / n * 360 - 180;
-  const lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (ty + 0.5) / n))) * 180 / Math.PI;
-  return { lat, lng };
-}
-
-function tileInsideCzechia(tx, ty, zoom) {
-  const { lat, lng } = tileCenter(tx, ty, zoom);
-  return insidePolygon(lat, lng, CZ_POLYGON);
-}
 
 function handleWorldConfig(res) {
   jsonOk(res, { zoom: WORLD.zoom, puzzleW: WORLD.puzzleW, puzzleH: WORLD.puzzleH });
@@ -506,15 +472,12 @@ function handleWorldTiles(query, res) {
   const tiles = db.getTilesInBbox(txMin, tyMin, txMax, tyMax, zoom).map(t => ({
     tx: t.tx, ty: t.ty, zoom: t.zoom,
     owner: t.owner_nickname,
+    ownerHue: t.owner_hue,
     strength: t.strength,
     bonus: t.bonus,
   }));
   jsonOk(res, tiles);
 }
-
-// CZ tile bounds at zoom 15 (derived from CZ_BBOX)
-const CZ_TX_MIN = 17483;
-const CZ_TY_MIN = 10950;
 
 function handleWorldOverview(query, res) {
   const p        = new URLSearchParams(query);
@@ -523,19 +486,22 @@ function handleWorldOverview(query, res) {
 
   const cells = {};
   for (const t of tiles) {
-    const cx  = Math.floor((t.tx - CZ_TX_MIN) / cellSize);
-    const cy  = Math.floor((t.ty - CZ_TY_MIN) / cellSize);
+    const cx  = Math.floor((t.tx - WORLD.czTxMin) / cellSize);
+    const cy  = Math.floor((t.ty - WORLD.czTyMin) / cellSize);
     const key = `${cx},${cy}`;
-    if (!cells[key]) cells[key] = { cellX: cx, cellY: cy, owners: {} };
+    if (!cells[key]) cells[key] = { cellX: cx, cellY: cy, owners: {}, hues: {} };
     cells[key].owners[t.owner_nickname] = (cells[key].owners[t.owner_nickname] || 0) + 1;
+    cells[key].hues[t.owner_nickname]   = t.owner_hue;
   }
 
   const result = Object.values(cells).map(cell => {
     const entries = Object.entries(cell.owners).sort((a, b) => b[1] - a[1]);
+    const top = entries[0][0];
     return {
       cellX:     cell.cellX,
       cellY:     cell.cellY,
-      owner:     entries[0][0],
+      owner:     top,
+      ownerHue:  cell.hues[top],
       count:     entries[0][1],
       contested: entries.length > 1,
     };
@@ -553,17 +519,15 @@ function handleWorldClaim(req, res) {
     try {
       const { tx, ty } = JSON.parse(body);
       if (typeof tx !== 'number' || typeof ty !== 'number') throw new Error();
-      const zoom = WORLD.zoom;
-
-      if (!tileInsideCzechia(tx, ty, zoom))
+      if (tx < WORLD.czTxMin || tx > WORLD.czTxMax || ty < WORLD.czTyMin || ty > WORLD.czTyMax)
         return jsonOk(res, { ok: false, error: 'out_of_bounds' });
 
-      const existing = db.getTile(tx, ty, zoom);
+      const existing = db.getTile(tx, ty, WORLD.zoom);
       if (existing)
         return jsonOk(res, { ok: false, error: 'already_claimed' });
 
       const bonus = Math.random() < WORLD.bonusChance ? 1 : null;
-      db.claimTile(tx, ty, zoom, player.id, bonus);
+      db.claimTile(tx, ty, WORLD.zoom, player.id, bonus);
       jsonOk(res, { ok: true, bonus });
     } catch {
       res.writeHead(400); res.end('Bad request');

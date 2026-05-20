@@ -33,6 +33,8 @@ db.exec(`
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_tiles_owner ON tiles(owner_id)`);
 
+try { db.exec('ALTER TABLE players ADD COLUMN hue INTEGER'); } catch { /* already exists */ }
+
 // ── Lookups ───────────────────────────────────────────────────────────────────
 
 const stmts = {
@@ -57,7 +59,7 @@ const stmts = {
   getTile: db.prepare('SELECT * FROM tiles WHERE tx = ? AND ty = ? AND zoom = ?'),
   getTilesByOwner: db.prepare('SELECT * FROM tiles WHERE owner_id = ?'),
   getTilesInBbox: db.prepare(
-    'SELECT tiles.*, players.nickname as owner_nickname FROM tiles ' +
+    'SELECT tiles.*, players.nickname as owner_nickname, players.hue as owner_hue FROM tiles ' +
     'JOIN players ON tiles.owner_id = players.id ' +
     'WHERE zoom = ? AND tx >= ? AND tx <= ? AND ty >= ? AND ty <= ?'
   ),
@@ -67,9 +69,10 @@ const stmts = {
   `),
   getOwnerTileCount: db.prepare('SELECT COUNT(*) as count FROM tiles WHERE owner_id = ?'),
   getAllTiles: db.prepare(
-    'SELECT tiles.*, players.nickname as owner_nickname FROM tiles ' +
+    'SELECT tiles.*, players.nickname as owner_nickname, players.hue as owner_hue FROM tiles ' +
     'JOIN players ON tiles.owner_id = players.id'
   ),
+  setHue: db.prepare('UPDATE players SET hue = ? WHERE id = ?'),
 };
 
 function findById(id)           { return stmts.byId.get(id) || null; }
@@ -114,6 +117,7 @@ function claimTile(tx, ty, zoom, ownerId, bonus) {
   return stmts.claimTile.run({ tx, ty, zoom, ownerId, bonus: bonus || null });
 }
 function getOwnerTileCount(ownerId)      { return stmts.getOwnerTileCount.get(ownerId).count; }
+function setHue(id, hue)                 { stmts.setHue.run(hue, id); }
 function getAllTiles()                    { return stmts.getAllTiles.all(); }
 
 // ── Migration from players.json ───────────────────────────────────────────────
@@ -163,4 +167,5 @@ module.exports = {
   claimTile,
   getOwnerTileCount,
   getAllTiles,
+  setHue,
 };

@@ -1,25 +1,5 @@
 'use strict';
 
-// ── Geography ─────────────────────────────────────────────────────────────
-
-const CZ_BBOX = { minLat: 48.55, maxLat: 51.06, minLng: 12.09, maxLng: 18.87 };
-
-// ── Tile math ─────────────────────────────────────────────────────────────
-
-function lngToTileFrac(lng, z) { return (lng + 180) / 360 * Math.pow(2, z); }
-
-function latToTileFrac(lat, z) {
-  const r = lat * Math.PI / 180;
-  return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z);
-}
-
-function tileCornerToLatLng(tx, ty, z) {
-  const n   = Math.pow(2, z);
-  const lng = tx / n * 360 - 180;
-  const lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * ty / n))) * 180 / Math.PI;
-  return { lat, lng };
-}
-
 // ── World constants ───────────────────────────────────────────────────────
 
 const CELL_SIZE = 16;
@@ -32,16 +12,13 @@ const CZ_TY_MAX = 11312;
 
 // ── Colors ────────────────────────────────────────────────────────────────
 
-function playerColor(nickname) {
+function nicknameHue(nickname) {
   let h = 0;
   for (let i = 0; i < nickname.length; i++) h = (h * 31 + nickname.charCodeAt(i)) & 0xFFFFFF;
-  return `hsl(${h % 360}, 65%, 55%)`;
+  return h % 360;
 }
 
-function playerColorRgb(nickname) {
-  let h = 0;
-  for (let i = 0; i < nickname.length; i++) h = (h * 31 + nickname.charCodeAt(i)) & 0xFFFFFF;
-  const hue = h % 360;
+function hueToRgb(hue) {
   const s = 0.65, l = 0.55;
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs((hue / 60) % 2 - 1));
@@ -55,6 +32,9 @@ function playerColorRgb(nickname) {
   else                { r = c; b = x; }
   return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255) };
 }
+
+function ownerHue(owner, storedHue)  { return storedHue != null ? storedHue : nicknameHue(owner); }
+function ownerColor(owner, storedHue) { return `hsl(${ownerHue(owner, storedHue)}, 65%, 55%)`; }
 
 // ── State ─────────────────────────────────────────────────────────────────
 
@@ -70,13 +50,15 @@ async function renderGlobal() {
 
   const zoom   = 8;
   const tilePx = 256;
-  const gLeft  = lngToTileFrac(CZ_BBOX.minLng, zoom);
-  const gRight = lngToTileFrac(CZ_BBOX.maxLng, zoom);
-  const gTop   = latToTileFrac(CZ_BBOX.maxLat, zoom);
-  const gBot   = latToTileFrac(CZ_BBOX.minLat, zoom);
   const ratio  = Math.pow(2, ZOOM - zoom);
-  canvas.width  = Math.round((gRight - gLeft) * tilePx);
-  canvas.height = Math.round((gBot   - gTop)  * tilePx);
+  const cellsX = Math.ceil((CZ_TX_MAX - CZ_TX_MIN + 1) / CELL_SIZE);
+  const cellsY = Math.ceil((CZ_TY_MAX - CZ_TY_MIN + 1) / CELL_SIZE);
+  const gLeft  = CZ_TX_MIN / ratio;
+  const gTop   = CZ_TY_MIN / ratio;
+  const gRight = (CZ_TX_MIN + cellsX * CELL_SIZE) / ratio;
+  const gBot   = (CZ_TY_MIN + cellsY * CELL_SIZE) / ratio;
+  canvas.width  = cellsX * CELL_SIZE / ratio * tilePx;
+  canvas.height = cellsY * CELL_SIZE / ratio * tilePx;
 
   // Background tiles — draw with sub-tile offset so CZ_BBOX aligns to canvas origin
   const tileLoads = [];
@@ -101,20 +83,12 @@ async function renderGlobal() {
   for (const c of overview) {
     const px0 = ((CZ_TX_MIN + c.cellX * CELL_SIZE) / ratio - gLeft) * tilePx;
     const py0 = ((CZ_TY_MIN + c.cellY * CELL_SIZE) / ratio - gTop)  * tilePx;
-    const { r, g, b } = playerColorRgb(c.owner);
+    const { r, g, b } = hueToRgb(ownerHue(c.owner, c.ownerHue));
     ctx.fillStyle = `rgba(${r},${g},${b},${c.contested ? 0.4 : 0.6})`;
     ctx.fillRect(px0, py0, cellPx, cellPx);
   }
 
-  function drawCellHighlight(cellX, cellY) {
-    const px0 = ((CZ_TX_MIN + cellX * CELL_SIZE) / ratio - gLeft) * tilePx;
-    const py0 = ((CZ_TY_MIN + cellY * CELL_SIZE) / ratio - gTop)  * tilePx;
-    ctx.strokeStyle = '#4ecca3';
-    ctx.lineWidth   = 2;
-    ctx.strokeRect(px0 + 1, py0 + 1, cellPx - 2, cellPx - 2);
-  }
-
-  // Hover overlay canvas
+// Hover overlay canvas
   const hover    = document.getElementById('global-hover');
   hover.width    = canvas.width;
   hover.height   = canvas.height;
@@ -138,20 +112,17 @@ async function renderGlobal() {
     if (cellX >= 0 && cellX < cellsX && cellY >= 0 && cellY < cellsY) {
       const px0 = ((CZ_TX_MIN + cellX * CELL_SIZE) / ratio - gLeft) * tilePx;
       const py0 = ((CZ_TY_MIN + cellY * CELL_SIZE) / ratio - gTop)  * tilePx;
-      hoverCtx.fillStyle = 'rgba(255,255,255,0.18)';
+      hoverCtx.fillStyle = 'rgba(0,0,0,0.45)';
       hoverCtx.fillRect(px0, py0, cellPx, cellPx);
     }
   });
   canvas.addEventListener('mouseleave', () => hoverCtx.clearRect(0, 0, hover.width, hover.height));
 
   // Click → highlight + drill into regional view
-  const cellsX = Math.ceil((CZ_TX_MAX - CZ_TX_MIN + 1) / CELL_SIZE);
-  const cellsY = Math.ceil((CZ_TY_MAX - CZ_TY_MIN + 1) / CELL_SIZE);
   if (globalClickHandler) canvas.removeEventListener('click', globalClickHandler);
   globalClickHandler = (e) => {
     const { cellX, cellY } = canvasCell(e);
     if (cellX >= 0 && cellX < cellsX && cellY >= 0 && cellY < cellsY) {
-      drawCellHighlight(cellX, cellY);
       openRegional(cellX, cellY);
     }
   };
@@ -162,12 +133,13 @@ async function renderGlobal() {
 // ── Regional view ─────────────────────────────────────────────────────────
 
 const TILE_PX   = 10;
+const CHUNK_SIZE = 4; // puzzle grid: 4×4 z15 tiles
 const REGION_R  = 1;
 const REGION_SZ = (1 + REGION_R * 2) * CELL_SIZE; // 48 z15 tiles
 
-const BG_ZOOM  = 12;
-const BG_RATIO = Math.pow(2, ZOOM - BG_ZOOM); // 8
-const BG_PX    = TILE_PX * BG_RATIO;           // 80px per z12 tile
+const BG_ZOOM  = 11;
+const BG_RATIO = Math.pow(2, ZOOM - BG_ZOOM); // 16
+const BG_PX    = TILE_PX * BG_RATIO;           // 160px per z11 tile
 
 async function renderRegional(cellX, cellY) {
   const canvas = document.getElementById('regional-canvas');
@@ -217,21 +189,47 @@ async function renderRegional(cellX, cellY) {
   for (const t of tiles) {
     const px = (t.tx - tx0) * TILE_PX;
     const py = (t.ty - ty0) * TILE_PX;
-    const { r, g, b } = playerColorRgb(t.owner_nickname);
+    const { r, g, b } = hueToRgb(ownerHue(t.owner, t.ownerHue));
     ctx.fillStyle = `rgba(${r},${g},${b},0.45)`;
     ctx.fillRect(px, py, TILE_PX, TILE_PX);
-    legend[t.owner_nickname] = playerColor(t.owner_nickname);
+    legend[t.owner] = ownerColor(t.owner, t.ownerHue);
   }
 
-  // Selected cell outline
-  const selTx = CZ_TX_MIN + cellX * CELL_SIZE;
-  const selTy = CZ_TY_MIN + cellY * CELL_SIZE;
-  const selPx = (selTx - tx0) * TILE_PX;
-  const selPy = (selTy - ty0) * TILE_PX;
-  const selSz = CELL_SIZE * TILE_PX;
-  ctx.strokeStyle = '#4ecca3';
-  ctx.lineWidth   = 2;
-  ctx.strokeRect(selPx + 1, selPy + 1, selSz - 2, selSz - 2);
+  // Hover + click overlay (snapped to CHUNK_SIZE×CHUNK_SIZE puzzle grid)
+  const hover    = document.getElementById('regional-hover');
+  hover.width    = size;
+  hover.height   = size;
+  const hoverCtx = hover.getContext('2d');
+  const chunkPx  = CHUNK_SIZE * TILE_PX;
+
+  function canvasChunk(e) {
+    const rect  = canvas.getBoundingClientRect();
+    const absTx = tx0 + Math.floor((e.clientX - rect.left) / TILE_PX);
+    const absTy = ty0 + Math.floor((e.clientY - rect.top)  / TILE_PX);
+    const chunkTx = Math.floor((absTx - CZ_TX_MIN) / CHUNK_SIZE) * CHUNK_SIZE + CZ_TX_MIN;
+    const chunkTy = Math.floor((absTy - CZ_TY_MIN) / CHUNK_SIZE) * CHUNK_SIZE + CZ_TY_MIN;
+    return { chunkTx, chunkTy };
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const { chunkTx, chunkTy } = canvasChunk(e);
+    hoverCtx.clearRect(0, 0, size, size);
+    hoverCtx.fillStyle = 'rgba(0,0,0,0.45)';
+    hoverCtx.fillRect((chunkTx - tx0) * TILE_PX, (chunkTy - ty0) * TILE_PX, chunkPx, chunkPx);
+  });
+  canvas.addEventListener('mouseleave', () => hoverCtx.clearRect(0, 0, size, size));
+
+  canvas.style.cursor = 'pointer';
+  canvas.addEventListener('click', async (e) => {
+    const { chunkTx, chunkTy } = canvasChunk(e);
+    const res  = await fetch('/shorten', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ tx: chunkTx, ty: chunkTy, z: ZOOM, w: CHUNK_SIZE, h: CHUNK_SIZE, n: 1 }),
+    });
+    const { code } = await res.json();
+    window.location.href = '/s/' + code;
+  });
 
   // Legend
   const legendEl = document.getElementById('regional-legend');
