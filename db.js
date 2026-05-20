@@ -18,6 +18,21 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tiles (
+    tx         INTEGER NOT NULL,
+    ty         INTEGER NOT NULL,
+    zoom       INTEGER NOT NULL,
+    owner_id   INTEGER NOT NULL REFERENCES players(id),
+    claimed_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    strength   INTEGER NOT NULL DEFAULT 1,
+    bonus      INTEGER,
+    PRIMARY KEY (tx, ty, zoom)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_tiles_owner ON tiles(owner_id)`);
+
 // ── Lookups ───────────────────────────────────────────────────────────────────
 
 const stmts = {
@@ -38,6 +53,19 @@ const stmts = {
   updateNickname: db.prepare('UPDATE players SET nickname = ? WHERE id = ?'),
   linkGoogle:     db.prepare('UPDATE players SET google_id = ? WHERE id = ?'),
   linkEmail:      db.prepare('UPDATE players SET email = ?, password_hash = ? WHERE id = ?'),
+
+  getTile: db.prepare('SELECT * FROM tiles WHERE tx = ? AND ty = ? AND zoom = ?'),
+  getTilesByOwner: db.prepare('SELECT * FROM tiles WHERE owner_id = ?'),
+  getTilesInBbox: db.prepare(
+    'SELECT tiles.*, players.nickname as owner_nickname FROM tiles ' +
+    'JOIN players ON tiles.owner_id = players.id ' +
+    'WHERE zoom = ? AND tx >= ? AND tx <= ? AND ty >= ? AND ty <= ?'
+  ),
+  claimTile: db.prepare(`
+    INSERT INTO tiles (tx, ty, zoom, owner_id, claimed_at, bonus)
+    VALUES (@tx, @ty, @zoom, @ownerId, datetime('now'), @bonus)
+  `),
+  getOwnerTileCount: db.prepare('SELECT COUNT(*) as count FROM tiles WHERE owner_id = ?'),
 };
 
 function findById(id)           { return stmts.byId.get(id) || null; }
@@ -70,6 +98,18 @@ function linkGoogle(id, googleId) {
 function linkEmail(id, email, passwordHash) {
   stmts.linkEmail.run(email.toLowerCase(), passwordHash, id);
 }
+
+// ── Tiles ─────────────────────────────────────────────────────────────────────
+
+function getTile(tx, ty, zoom)           { return stmts.getTile.get(tx, ty, zoom) || null; }
+function getTilesByOwner(ownerId)        { return stmts.getTilesByOwner.all(ownerId); }
+function getTilesInBbox(txMin, tyMin, txMax, tyMax, zoom) {
+  return stmts.getTilesInBbox.all(zoom, txMin, txMax, tyMin, tyMax);
+}
+function claimTile(tx, ty, zoom, ownerId, bonus) {
+  return stmts.claimTile.run({ tx, ty, zoom, ownerId, bonus: bonus || null });
+}
+function getOwnerTileCount(ownerId)      { return stmts.getOwnerTileCount.get(ownerId).count; }
 
 // ── Migration from players.json ───────────────────────────────────────────────
 
@@ -112,4 +152,9 @@ module.exports = {
   linkGoogle,
   linkEmail,
   migrateFromJson,
+  getTile,
+  getTilesByOwner,
+  getTilesInBbox,
+  claimTile,
+  getOwnerTileCount,
 };

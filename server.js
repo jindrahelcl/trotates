@@ -23,9 +23,10 @@ function loadEnv(filePath) {
 
 loadEnv(path.join(__dirname, '.env'));
 
-// ── Auth + DB (must require after .env is loaded) ─────────────────────────
-const auth = require('./auth');
-const db   = require('./db');
+// ── Auth + DB + World (must require after .env is loaded) ────────────────
+const auth  = require('./auth');
+const db    = require('./db');
+const WORLD = require('./world');
 
 const API_KEY = process.env.MAPY_API_KEY;
 if (!API_KEY) {
@@ -448,6 +449,96 @@ function handleRandomPlayed(req, query, res) {
   res.end(JSON.stringify({ tx, ty }));
 }
 
+// ── World / territory ─────────────────────────────────────────────────────
+
+const CZ_POLYGON = [
+  [50.35, 12.09], [50.75, 12.20], [51.00, 12.65],
+  [51.06, 13.50], [51.05, 14.35], [50.85, 15.00],
+  [50.80, 15.80], [50.60, 16.40], [50.42, 16.80],
+  [50.42, 18.01], [50.10, 18.55], [49.57, 18.87],
+  [49.30, 18.30], [49.10, 18.10], [48.85, 17.50],
+  [48.56, 16.96], [48.65, 16.00], [48.85, 15.75],
+  [48.85, 15.20], [48.56, 14.80], [48.75, 13.80],
+  [49.00, 13.40], [49.20, 13.10], [49.55, 12.80],
+  [49.95, 12.14], [50.35, 12.09],
+];
+
+function insidePolygon(lat, lng, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [yi, xi] = poly[i];
+    const [yj, xj] = poly[j];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi))
+      inside = !inside;
+  }
+  return inside;
+}
+
+function tileCenter(tx, ty, zoom) {
+  const n   = Math.pow(2, zoom);
+  const lng = (tx + 0.5) / n * 360 - 180;
+  const lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (ty + 0.5) / n))) * 180 / Math.PI;
+  return { lat, lng };
+}
+
+function tileInsideCzechia(tx, ty, zoom) {
+  const { lat, lng } = tileCenter(tx, ty, zoom);
+  return insidePolygon(lat, lng, CZ_POLYGON);
+}
+
+function handleWorldConfig(res) {
+  jsonOk(res, { zoom: WORLD.zoom, puzzleW: WORLD.puzzleW, puzzleH: WORLD.puzzleH });
+}
+
+function handleWorldTiles(query, res) {
+  const p    = new URLSearchParams(query);
+  const zoom = WORLD.zoom;
+  const txMin = parseInt(p.get('txMin'));
+  const tyMin = parseInt(p.get('tyMin'));
+  const txMax = parseInt(p.get('txMax'));
+  const tyMax = parseInt(p.get('tyMax'));
+  if ([txMin, tyMin, txMax, tyMax].some(isNaN)) {
+    res.writeHead(400); res.end('Bad request'); return;
+  }
+  if ((txMax - txMin) > 200 || (tyMax - tyMin) > 200) {
+    res.writeHead(400); res.end('Bounding box too large'); return;
+  }
+  const tiles = db.getTilesInBbox(txMin, tyMin, txMax, tyMax, zoom).map(t => ({
+    tx: t.tx, ty: t.ty, zoom: t.zoom,
+    owner: t.owner_nickname,
+    strength: t.strength,
+    bonus: t.bonus,
+  }));
+  jsonOk(res, tiles);
+}
+
+function handleWorldClaim(req, res) {
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { tx, ty } = JSON.parse(body);
+      if (typeof tx !== 'number' || typeof ty !== 'number') throw new Error();
+      const zoom = WORLD.zoom;
+
+      if (!tileInsideCzechia(tx, ty, zoom))
+        return jsonOk(res, { ok: false, error: 'out_of_bounds' });
+
+      const existing = db.getTile(tx, ty, zoom);
+      if (existing)
+        return jsonOk(res, { ok: false, error: 'already_claimed' });
+
+      const bonus = Math.random() < WORLD.bonusChance ? 1 : null;
+      db.claimTile(tx, ty, zoom, player.id, bonus);
+      jsonOk(res, { ok: true, bonus });
+    } catch {
+      res.writeHead(400); res.end('Bad request');
+    }
+  });
+}
+
 // ── Router ────────────────────────────────────────────────────────────────
 const TILE_RE    = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
 const SHORT_RE   = /^\/s\/([a-z]{10})$/;  // page route — serves index.html
@@ -501,6 +592,18 @@ const server = http.createServer((req, res) => {
 
   if (url === '/profile/stats' && req.method === 'GET') {
     return handleProfileStats(req, res);
+  }
+
+  if (url === '/world/config' && req.method === 'GET') {
+    return handleWorldConfig(res);
+  }
+
+  if (url.startsWith('/world/tiles') && req.method === 'GET') {
+    return handleWorldTiles(query, res);
+  }
+
+  if (url === '/world/claim' && req.method === 'POST') {
+    return handleWorldClaim(req, res);
   }
 
   // /resolve/CODE — JSON data endpoint (called by client JS)
