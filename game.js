@@ -248,8 +248,6 @@
       authPanel.style.display   = 'none';
       accountPanel.style.display = '';
       accountNicknameDisplay.textContent = cfgNickname.value.trim();
-      accountChangeMsg.style.display = 'none';
-      accountNewNameInput.value = '';
     } else {
       authPanel.style.display   = '';
       accountPanel.style.display = 'none';
