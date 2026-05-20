@@ -23,6 +23,9 @@ function loadEnv(filePath) {
 
 loadEnv(path.join(__dirname, '.env'));
 
+// ── Auth (must require after .env is loaded) ──────────────────────────────
+const auth = require('./auth');
+
 const API_KEY = process.env.MAPY_API_KEY;
 if (!API_KEY) {
   console.error('Error: MAPY_API_KEY not set. Add it to .env or the environment.');
@@ -563,6 +566,12 @@ const server = http.createServer((req, res) => {
   const qIdx  = req.url.indexOf('?');
   const url   = qIdx === -1 ? req.url : req.url.slice(0, qIdx);
   const query = qIdx === -1 ? ''      : req.url.slice(qIdx + 1);
+
+  // ── Auth routes ─────────────────────────────────────────────────────────
+  if (url === '/auth/register'    && req.method === 'POST') return auth.handleRegister(req, res);
+  if (url === '/auth/login'       && req.method === 'POST') return auth.handleLogin(req, res);
+  if (url === '/auth/google'      && req.method === 'POST') return auth.handleGoogle(req, res);
+  if (url === '/auth/link-google' && req.method === 'POST') return auth.handleLinkGoogle(req, res);
 
   if (url === '/leaderboard') {
     if (req.method === 'GET')  return handleGetLeaderboard(query, res);
