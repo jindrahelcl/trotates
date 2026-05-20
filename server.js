@@ -234,6 +234,29 @@ function jsonOk(res, data) {
   res.end(JSON.stringify(data));
 }
 
+function handleProfileStats(req, res) {
+  const token   = auth.extractToken(req);
+  const payload = token ? auth.verifyToken(token) : null;
+  const player  = payload ? db.findById(payload.sub) : null;
+  if (!player) { res.writeHead(401); res.end('Unauthorized'); return; }
+
+  const lb     = readLeaderboard();
+  const nick   = player.nickname;
+  let solves   = 0;
+  for (const entries of Object.values(lb.locations || {})) {
+    solves += entries.filter(e => e.nickname === nick).length;
+  }
+  const wins = (lb.wins || {})[nick] || 0;
+
+  jsonOk(res, {
+    nickname:      player.nickname,
+    campaignLevel: player.campaign_level,
+    createdAt:     player.created_at,
+    solves,
+    wins,
+  });
+}
+
 function handleGetMe(req, res) {
   const token   = auth.extractToken(req);
   const payload = token ? auth.verifyToken(token) : null;
@@ -427,7 +450,7 @@ function handleRandomPlayed(req, query, res) {
 const TILE_RE    = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
 const SHORT_RE   = /^\/s\/([a-z]{10})$/;  // page route — serves index.html
 const RESOLVE_RE = /^\/resolve\/([a-z]{10})$/;  // JSON API — returns tile coords
-const STATIC_FILES = new Set(['index.html', 'style.css', 'game.js', 'welcome.html', 'welcome.css', 'welcome.js']);
+const STATIC_FILES = new Set(['index.html', 'style.css', 'game.js', 'welcome.html', 'welcome.css', 'welcome.js', 'tiles-anim.js', 'profile.html', 'profile.css', 'profile.js']);
 
 const server = http.createServer((req, res) => {
   const qIdx  = req.url.indexOf('?');
@@ -474,6 +497,10 @@ const server = http.createServer((req, res) => {
     return handleGetMe(req, res);
   }
 
+  if (url === '/profile/stats' && req.method === 'GET') {
+    return handleProfileStats(req, res);
+  }
+
   // /resolve/CODE — JSON data endpoint (called by client JS)
   const resolveMatch = url.match(RESOLVE_RE);
   if (resolveMatch && req.method === 'GET') {
@@ -496,6 +523,11 @@ const server = http.createServer((req, res) => {
 
   if (url === '/welcome') {
     serveStatic(res, path.join(__dirname, 'welcome.html'));
+    return;
+  }
+
+  if (url === '/profile') {
+    serveStatic(res, path.join(__dirname, 'profile.html'));
     return;
   }
 

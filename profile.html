@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Rotator — Profile</title>
+  <link rel="stylesheet" href="/profile.css">
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- Left sidebar -->
+    <nav class="sidebar">
+      <a href="/" class="sidebar-brand">Map<span>Rotator</span></a>
+
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar"></div>
+        <div class="sidebar-nickname" id="sidebar-nickname"></div>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li><a href="/profile" class="sidebar-link active">Profile</a></li>
+      </ul>
+
+      <button id="signout-btn" class="sidebar-signout">Sign out</button>
+    </nav>
+
+    <!-- Right content -->
+    <main class="content">
+      <div id="content-loading" class="content-loading">Loading…</div>
+
+      <div id="content-main" style="display:none">
+        <h1 class="content-title">Profile</h1>
+        <p id="member-since" class="content-subtitle"></p>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <span class="stat-value" id="stat-solves">—</span>
+            <span class="stat-label">Solves</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-wins">—</span>
+            <span class="stat-label">Wins</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value" id="stat-campaign">—</span>
+            <span class="stat-label">Campaign level</span>
+          </div>
+        </div>
+
+        <section class="content-section">
+          <h2 class="section-title">Change nickname</h2>
+          <div class="input-row">
+            <input type="text" id="name-input" placeholder="New nickname" maxlength="20" autocomplete="off">
+            <button id="name-btn">Save</button>
+          </div>
+          <p id="name-msg" class="field-msg" style="display:none"></p>
+        </section>
+      </div>
+
+      <div id="content-unauth" style="display:none" class="content-unauth">
+        <p>You're not signed in.</p>
+        <a href="/welcome" class="btn-primary">Sign in</a>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="/profile.js"></script>
+</body>
+</html>

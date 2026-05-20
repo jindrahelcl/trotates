@@ -1211,7 +1211,10 @@
   }
 
   // Account modal — open/close
-  accountBtn.addEventListener('click', () => openAccountOverlay());
+  accountBtn.addEventListener('click', () => {
+    if (playerRegistered) location.href = '/profile';
+    else openAccountOverlay();
+  });
   accountCloseBtn.addEventListener('click', () => {
     accountOverlay.classList.add('hidden');
     pendingCampaignAfterAuth = false;
