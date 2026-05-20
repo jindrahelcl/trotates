@@ -6,8 +6,8 @@
 
 :root {
   --tile-size: 96px;
-  --grid-cols: 5;
-  --grid-rows: 5;
+  --grid-cols: 4;
+  --grid-rows: 4;
   --accent: #e94560;
   --accent2: #4ecca3;
   --bg: #1a1a2e;
@@ -223,13 +223,21 @@ body {
   perspective: 900px;
 }
 
+@keyframes grid-drift {
+  0%   { transform: rotateX(22deg) rotateZ(-8deg)  rotateY(0deg); }
+  25%  { transform: rotateX(26deg) rotateZ(-4deg)  rotateY(4deg); }
+  50%  { transform: rotateX(19deg) rotateZ(-12deg) rotateY(-3deg); }
+  75%  { transform: rotateX(24deg) rotateZ(-5deg)  rotateY(5deg); }
+  100% { transform: rotateX(22deg) rotateZ(-8deg)  rotateY(0deg); }
+}
+
 .tile-grid {
   display: grid;
   grid-template-columns: repeat(var(--grid-cols), var(--tile-size));
   grid-template-rows: repeat(var(--grid-rows), var(--tile-size));
-  transform: rotateX(22deg) rotateZ(-8deg);
   transform-style: preserve-3d;
   gap: 2px;
+  animation: grid-drift 28s ease-in-out infinite;
 }
 
 .tile-cell {

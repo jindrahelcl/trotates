@@ -31,21 +31,40 @@ function buildGrid() {
 }
 
 function scheduleSpin(grid) {
-  const cells = Array.from(grid.children);
+  const cells  = Array.from(grid.children);
+  const timers = new Set();
+
+  function later(fn, delay) {
+    const id = setTimeout(() => { timers.delete(id); fn(); }, delay);
+    timers.add(id);
+  }
 
   function spinCell(cell) {
-    const deg = (Math.floor(Math.random() * 3) + 1) * 90;
-    const cur = parseInt(cell.dataset.rot || '0');
+    if (document.hidden) return; // will restart on visibilitychange
+    const deg  = (Math.floor(Math.random() * 3) + 1) * 90;
+    const cur  = parseInt(cell.dataset.rot || '0');
     const next = cur + deg;
     cell.dataset.rot = next;
     cell.style.transform = `rotateZ(${next}deg)`;
-    setTimeout(() => spinCell(cell), 2500 + Math.random() * 4000);
+    later(() => spinCell(cell), 2500 + Math.random() * 4000);
   }
 
-  // stagger start so they don't all fire at once
-  cells.forEach((cell, i) => {
-    setTimeout(() => spinCell(cell), i * 250 + Math.random() * 800);
+  function startAll() {
+    cells.forEach((cell, i) => {
+      later(() => spinCell(cell), i * 250 + Math.random() * 800);
+    });
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      // clear any timers that fired while hidden and restart fresh
+      timers.forEach(id => clearTimeout(id));
+      timers.clear();
+      startAll();
+    }
   });
+
+  startAll();
 }
 
 buildGrid();
