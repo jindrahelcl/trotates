@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-client-id" content="837226827485-olv57cib909dfntcq77ienj46inq3hus.apps.googleusercontent.com">
   <title>Map Rotator</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="https://accounts.google.com/gsi/client" async></script>
 </head>
 <body>
   <header>
@@ -118,62 +120,61 @@
     </div>
   </div>
 
-  <!-- Shown once after first registration -->
-  <div id="claim-overlay" class="overlay hidden">
-    <div class="overlay-box">
-      <h2>Account Created</h2>
-      <p>Save this recovery code to restore your progress on another device:</p>
-      <div class="claim-code-box">
-        <span id="claim-code-display"></span>
-        <button id="claim-code-copy-btn">Copy</button>
-      </div>
-      <p class="claim-code-note">You can always find this code in your account (⚙).</p>
-      <button id="claim-code-ok-btn">Got it</button>
-    </div>
-  </div>
-
-  <!-- Account modal -->
+  <!-- Auth / Account modal -->
   <div id="account-overlay" class="overlay hidden">
     <div class="overlay-box">
-      <h2>Account</h2>
+      <button id="account-close-btn" class="overlay-close-btn">✕</button>
 
-      <!-- Shown when registered -->
-      <div id="account-logged-in" style="display:none">
-        <p class="account-status">Logged in as <strong id="account-nickname-display"></strong></p>
-        <p class="account-section-label">Recovery code</p>
-        <div class="claim-code-box">
-          <span id="account-claim-code-display"></span>
-          <button id="account-copy-btn">Copy</button>
+      <!-- Shown when not logged in -->
+      <div id="auth-panel">
+        <h2>Sign In</h2>
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-auth-tab="login">Login</button>
+          <button class="auth-tab" data-auth-tab="register">Register</button>
         </div>
+
+        <div id="auth-login-tab">
+          <div class="auth-form-group">
+            <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
+          </div>
+          <div class="auth-form-group">
+            <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
+          </div>
+          <button id="auth-login-btn" class="auth-submit-btn">Sign in</button>
+          <p id="auth-login-msg" class="account-msg" style="display:none"></p>
+        </div>
+
+        <div id="auth-register-tab" style="display:none">
+          <div class="auth-form-group">
+            <input type="text" id="auth-nickname" placeholder="Nickname" maxlength="20" autocomplete="off">
+          </div>
+          <div class="auth-form-group">
+            <input type="email" id="auth-reg-email" placeholder="Email" autocomplete="email">
+          </div>
+          <div class="auth-form-group">
+            <input type="password" id="auth-reg-password" placeholder="Password (min 8 chars)" autocomplete="new-password">
+          </div>
+          <button id="auth-register-btn" class="auth-submit-btn">Create account</button>
+          <p id="auth-register-msg" class="account-msg" style="display:none"></p>
+        </div>
+
+        <div class="auth-divider"><span>or</span></div>
+        <div id="google-signin-btn"></div>
+      </div>
+
+      <!-- Shown when logged in -->
+      <div id="account-panel" style="display:none">
+        <h2>Account</h2>
+        <p class="account-status">Signed in as <strong id="account-nickname-display"></strong></p>
         <p class="account-section-label">Change name</p>
         <div class="claim-input-row">
           <input type="text" id="account-new-name-input" placeholder="new name" maxlength="20" autocomplete="off">
           <button id="account-new-name-btn">Save</button>
         </div>
         <p id="account-change-msg" class="account-msg" style="display:none"></p>
+        <button id="auth-signout-btn" class="auth-signout-btn">Sign out</button>
       </div>
 
-      <!-- Shown when not registered -->
-      <div id="account-create-section" style="display:none">
-        <p class="account-section-label">Create account</p>
-        <div class="claim-input-row">
-          <input type="text" id="account-create-input" placeholder="choose a name" maxlength="20" autocomplete="off">
-          <button id="account-create-btn">Create</button>
-        </div>
-        <p id="account-create-msg" class="account-msg" style="display:none"></p>
-      </div>
-
-      <!-- Always shown -->
-      <div class="account-restore-section">
-        <p class="account-section-label">Restore existing account</p>
-        <div class="claim-input-row">
-          <input type="text" id="account-claim-input" placeholder="bafoc-emidu-kalev" autocomplete="off" spellcheck="false">
-          <button id="account-claim-btn">Restore</button>
-        </div>
-        <p id="account-claim-msg" class="account-msg" style="display:none"></p>
-      </div>
-
-      <button id="account-close-btn">Close</button>
     </div>
   </div>
 

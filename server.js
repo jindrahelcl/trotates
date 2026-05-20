@@ -191,6 +191,49 @@ function handleResolve(res, code) {
 
 // ── Players ───────────────────────────────────────────────────────────────
 
+function renameInLeaderboard(oldNick, newNick) {
+  const data = readLeaderboard();
+  let changed = false;
+  for (const entries of Object.values(data.locations)) {
+    for (const entry of entries) {
+      if (entry.nickname === oldNick) { entry.nickname = newNick; changed = true; }
+    }
+  }
+  if (data.wins[oldNick] !== undefined) {
+    data.wins[newNick] = (data.wins[newNick] || 0) + data.wins[oldNick];
+    delete data.wins[oldNick];
+    changed = true;
+  }
+  if (changed) writeLeaderboard(data);
+}
+
+function handleRename(req, res) {
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { nickname } = JSON.parse(body);
+      const nick = String(nickname || '').trim().slice(0, 20);
+      if (nick.length < 2) return jsonOk(res, { ok: false, error: 'nickname_invalid' });
+      const existing = db.findByNickname(nick);
+      if (existing && existing.id !== player.id) return jsonOk(res, { ok: false, error: 'nickname_taken' });
+      renameInLeaderboard(player.nickname, nick);
+      db.updateNickname(player.id, nick);
+      const updated = db.findById(player.id);
+      jsonOk(res, { ok: true, token: auth.signToken(updated), nickname: nick });
+    } catch {
+      res.writeHead(400); res.end('Bad request');
+    }
+  });
+}
+
+function jsonOk(res, data) {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(data));
+}
+
 function handleGetMe(req, res) {
   const token   = auth.extractToken(req);
   const payload = token ? auth.verifyToken(token) : null;
@@ -396,6 +439,7 @@ const server = http.createServer((req, res) => {
   if (url === '/auth/login'       && req.method === 'POST') return auth.handleLogin(req, res);
   if (url === '/auth/google'      && req.method === 'POST') return auth.handleGoogle(req, res);
   if (url === '/auth/link-google' && req.method === 'POST') return auth.handleLinkGoogle(req, res);
+  if (url === '/account/rename'   && req.method === 'POST') return handleRename(req, res);
 
   if (url === '/leaderboard') {
     if (req.method === 'GET')  return handleGetLeaderboard(query, res);

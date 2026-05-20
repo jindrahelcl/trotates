@@ -83,79 +83,61 @@
     ranked:        'mapRotatorRanked',
     hell:          'mapRotatorHell',
     campaignLevel: 'mapRotatorCampaignLevel',
-    token:         'mapRotatorToken',
+    jwt:           'mapRotatorJWT',
   };
 
   // ── Player identity ────────────────────────────────────────────────────────
-  let playerRegistered          = false;
-  let playerClaimCode           = null;
-  let pendingCampaignAfterLogin = false;
+  let playerRegistered         = false;
+  let pendingCampaignAfterAuth = false;
 
-  function getToken() {
-    let t = localStorage.getItem(LS.token);
-    if (!t) {
-      t = crypto.randomUUID();
-      localStorage.setItem(LS.token, t);
-    }
-    return t;
-  }
+  function getJWT()        { return localStorage.getItem(LS.jwt); }
+  function setJWT(token)   { localStorage.setItem(LS.jwt, token); }
+  function clearJWT()      { localStorage.removeItem(LS.jwt); }
 
   function authHeaders() {
-    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` };
+    const jwt = getJWT();
+    const h = { 'Content-Type': 'application/json' };
+    if (jwt) h['Authorization'] = `Bearer ${jwt}`;
+    return h;
   }
 
   function lockNickname() {
     nickDisplay.textContent = cfgNickname.value.trim();
   }
 
-  async function registerPlayer(nickname) {
-    try {
-      const r = await fetch('/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: getToken(), nickname }),
-      });
-      const data = await r.json();
-      if (data.ok) {
-        playerRegistered = true;
-        playerClaimCode  = data.claimCode;
-        cfgNickname.value = nickname;
-        localStorage.setItem(LS.nickname, nickname);
-        lockNickname();
-        updateRankedAvailability();
-        updateAccountBtn();
-        accountOverlay.classList.add('hidden');
-        if (pendingSolve) {
-          postSolve(pendingSolve.time);
-          pendingSolve = null;
-          hide(anonPrompt);
-        }
-        if (pendingCampaignAfterLogin) {
-          pendingCampaignAfterLogin = false;
-          openCampaignOverview();
-        }
-        if (data.isNew) showClaimOverlay(data.claimCode);
-      }
-      return data;
-    } catch {
-      return { ok: false, error: 'network' };
+  function onAuthSuccess({ token, nickname }) {
+    setJWT(token);
+    playerRegistered  = true;
+    cfgNickname.value = nickname;
+    localStorage.setItem(LS.nickname, nickname);
+    lockNickname();
+    updateRankedAvailability();
+    updateAccountBtn();
+    accountOverlay.classList.add('hidden');
+    if (pendingSolve) {
+      postSolve(pendingSolve.time);
+      pendingSolve = null;
+      hide(anonPrompt);
+    }
+    if (pendingCampaignAfterAuth) {
+      pendingCampaignAfterAuth = false;
+      openCampaignOverview();
     }
   }
 
   async function fetchMe() {
+    const jwt = getJWT();
+    if (!jwt) return;
     try {
-      const r = await fetch('/me', { headers: { 'Authorization': `Bearer ${getToken()}` } });
+      const r = await fetch('/me', { headers: { 'Authorization': `Bearer ${jwt}` } });
       if (!r.ok) return;
       const data = await r.json();
       if (!data.registered) return;
-      playerRegistered = true;
-      playerClaimCode  = data.claimCode;
-      // Sync nickname from server; server is authoritative
+      playerRegistered  = true;
       cfgNickname.value = data.nickname;
       localStorage.setItem(LS.nickname, data.nickname);
       lockNickname();
       updateRankedAvailability();
-      // Sync campaign level: server wins if ahead
       const localLevel = parseInt(localStorage.getItem(LS.campaignLevel) || '0');
       if (data.campaignLevel > localLevel) {
         localStorage.setItem(LS.campaignLevel, data.campaignLevel);
@@ -201,29 +183,16 @@
   const anonPrompt  = document.getElementById('anon-prompt');
   const mapyLink    = document.getElementById('mapy-link');
 
-  const nickDisplay             = document.getElementById('nick-display');
-  const accountBtn              = document.getElementById('account-btn');
-  const accountOverlay          = document.getElementById('account-overlay');
-  const accountLoggedIn         = document.getElementById('account-logged-in');
-  const accountNicknameDisplay  = document.getElementById('account-nickname-display');
-  const accountClaimCodeDisplay = document.getElementById('account-claim-code-display');
-  const accountCopyBtn          = document.getElementById('account-copy-btn');
-  const accountNewNameInput     = document.getElementById('account-new-name-input');
-  const accountNewNameBtn       = document.getElementById('account-new-name-btn');
-  const accountChangeMsg        = document.getElementById('account-change-msg');
-  const accountCreateSection    = document.getElementById('account-create-section');
-  const accountCreateInput      = document.getElementById('account-create-input');
-  const accountCreateBtn        = document.getElementById('account-create-btn');
-  const accountCreateMsg        = document.getElementById('account-create-msg');
-  const accountClaimInput       = document.getElementById('account-claim-input');
-  const accountClaimBtn         = document.getElementById('account-claim-btn');
-  const accountClaimMsg         = document.getElementById('account-claim-msg');
-  const accountClosBtn          = document.getElementById('account-close-btn');
-
-  const claimOverlay       = document.getElementById('claim-overlay');
-  const claimCodeDisplay   = document.getElementById('claim-code-display');
-  const claimCodeCopyBtn   = document.getElementById('claim-code-copy-btn');
-  const claimCodeOkBtn     = document.getElementById('claim-code-ok-btn');
+  const nickDisplay            = document.getElementById('nick-display');
+  const accountBtn             = document.getElementById('account-btn');
+  const accountOverlay         = document.getElementById('account-overlay');
+  const authPanel              = document.getElementById('auth-panel');
+  const accountPanel           = document.getElementById('account-panel');
+  const accountNicknameDisplay = document.getElementById('account-nickname-display');
+  const accountNewNameInput    = document.getElementById('account-new-name-input');
+  const accountNewNameBtn      = document.getElementById('account-new-name-btn');
+  const accountChangeMsg       = document.getElementById('account-change-msg');
+  const accountCloseBtn        = document.getElementById('account-close-btn');
 
   // ── Drag ghost ───────────────────────────────────────────────────────────
   const dragGhost = document.createElement('div');
@@ -269,29 +238,19 @@
     accountBtn.title = playerRegistered ? `Account (${cfgNickname.value.trim()})` : 'Account';
   }
 
-  function showClaimOverlay(code) {
-    claimCodeDisplay.textContent = code;
-    claimOverlay.classList.remove('hidden');
-  }
-
-  function openAccountOverlay(focusCreate = false) {
+  function openAccountOverlay(focusRegister = false) {
     if (playerRegistered) {
-      accountLoggedIn.style.display = '';
-      accountCreateSection.style.display = 'none';
+      authPanel.style.display   = 'none';
+      accountPanel.style.display = '';
       accountNicknameDisplay.textContent = cfgNickname.value.trim();
-      accountClaimCodeDisplay.textContent = playerClaimCode;
       accountChangeMsg.style.display = 'none';
       accountNewNameInput.value = '';
     } else {
-      accountLoggedIn.style.display = 'none';
-      accountCreateSection.style.display = '';
-      accountCreateMsg.style.display = 'none';
-      accountCreateInput.value = '';
+      authPanel.style.display   = '';
+      accountPanel.style.display = 'none';
+      if (focusRegister) switchAuthTab('register');
     }
-    accountClaimInput.value = '';
-    accountClaimMsg.style.display = 'none';
     accountOverlay.classList.remove('hidden');
-    if (focusCreate && !playerRegistered) setTimeout(() => accountCreateInput.focus(), 50);
   }
 
   function getCampaignUnlocked() {
@@ -701,7 +660,7 @@
 
   function openCampaignOverview() {
     if (!playerRegistered) {
-      pendingCampaignAfterLogin = true;
+      pendingCampaignAfterAuth = true;
       openAccountOverlay(true);
       return;
     }
@@ -1059,7 +1018,7 @@
       const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value)  || 4));
       const rows = Math.min(20, Math.max(1, parseInt(cfgHeight.value) || 4));
       const zoom = Math.min(19, Math.max(5, parseInt(cfgZoom.value) || 15));
-      fetch(`/random-played?w=${cols}&h=${rows}&z=${zoom}`, { headers: { 'Authorization': `Bearer ${getToken()}` } })
+      fetch(`/random-played?w=${cols}&h=${rows}&z=${zoom}`, { headers: authHeaders() })
         .then(r => r.json())
         .then(data => {
           if (data.tx !== null) pendingTile = { tx: data.tx, ty: data.ty };
@@ -1126,110 +1085,178 @@
     hide(winOverlay);
     openCampaignOverview();
   });
-  // Account modal
-  accountBtn.addEventListener('click', () => openAccountOverlay());
-  accountClosBtn.addEventListener('click', () => {
-    accountOverlay.classList.add('hidden');
-    pendingCampaignAfterLogin = false;
+  // ── Auth modal ────────────────────────────────────────────────────────────
+
+  function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.authTab === tab);
+    });
+    document.getElementById('auth-login-tab').style.display    = tab === 'login'    ? '' : 'none';
+    document.getElementById('auth-register-tab').style.display = tab === 'register' ? '' : 'none';
+  }
+
+  document.querySelectorAll('.auth-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchAuthTab(btn.dataset.authTab));
   });
 
-  // Create account
-  accountCreateBtn.addEventListener('click', async () => {
-    const name = accountCreateInput.value.trim().slice(0, 20);
-    if (!name) return;
-    accountCreateBtn.disabled = true;
-    const result = await registerPlayer(name);
-    accountCreateBtn.disabled = false;
-    if (!result.ok) {
-      if (result.error === 'taken') {
-        accountCreateMsg.textContent = 'Already registered. To claim it, enter your recovery code below.';
-        accountCreateMsg.style.color = '#aaa';
-        setTimeout(() => accountClaimInput.focus(), 50);
+  function showAuthMsg(elId, msg, color = '#e94560') {
+    const el = document.getElementById(elId);
+    el.textContent = msg;
+    el.style.color = color;
+    el.style.display = '';
+  }
+
+  // Login form
+  const authLoginBtn  = document.getElementById('auth-login-btn');
+  const authEmail     = document.getElementById('auth-email');
+  const authPassword  = document.getElementById('auth-password');
+
+  authLoginBtn.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    if (!email || !password) return;
+    authLoginBtn.disabled = true;
+    try {
+      const r = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        onAuthSuccess(data);
       } else {
-        accountCreateMsg.textContent = 'Error — try again.';
-        accountCreateMsg.style.color = '#e94560';
+        showAuthMsg('auth-login-msg', 'Invalid email or password.');
       }
-      accountCreateMsg.style.display = '';
-    }
+    } catch { showAuthMsg('auth-login-msg', 'Network error.'); }
+    authLoginBtn.disabled = false;
   });
-  accountCreateInput.addEventListener('keydown', e => { if (e.key === 'Enter') accountCreateBtn.click(); });
+  authEmail.addEventListener('keydown',    e => { if (e.key === 'Enter') authLoginBtn.click(); });
+  authPassword.addEventListener('keydown', e => { if (e.key === 'Enter') authLoginBtn.click(); });
 
-  // Change name (registered)
+  // Register form
+  const authRegisterBtn = document.getElementById('auth-register-btn');
+  const authNickname    = document.getElementById('auth-nickname');
+  const authRegEmail    = document.getElementById('auth-reg-email');
+  const authRegPassword = document.getElementById('auth-reg-password');
+
+  authRegisterBtn.addEventListener('click', async () => {
+    const nickname = authNickname.value.trim();
+    const email    = authRegEmail.value.trim();
+    const password = authRegPassword.value;
+    if (!nickname || !email || !password) return;
+    authRegisterBtn.disabled = true;
+    try {
+      const r = await fetch('/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname, email, password }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        onAuthSuccess(data);
+      } else {
+        const msgs = {
+          nickname_taken:    'Nickname already taken.',
+          email_taken:       'Email already registered.',
+          nickname_invalid:  'Nickname must be 2–20 characters.',
+          email_invalid:     'Enter a valid email address.',
+          password_too_short: 'Password must be at least 8 characters.',
+        };
+        showAuthMsg('auth-register-msg', msgs[data.error] || 'Error — try again.');
+      }
+    } catch { showAuthMsg('auth-register-msg', 'Network error.'); }
+    authRegisterBtn.disabled = false;
+  });
+  authNickname.addEventListener('keydown',    e => { if (e.key === 'Enter') authRegisterBtn.click(); });
+  authRegEmail.addEventListener('keydown',    e => { if (e.key === 'Enter') authRegisterBtn.click(); });
+  authRegPassword.addEventListener('keydown', e => { if (e.key === 'Enter') authRegisterBtn.click(); });
+
+  // Google Sign-In
+  function initGoogleSignIn() {
+    if (!window.google) return;
+    const clientId = document.querySelector('meta[name="google-client-id"]')?.content;
+    if (!clientId) return;
+    google.accounts.id.initialize({
+      client_id: clientId,
+      callback: async (response) => {
+        try {
+          const r = await fetch('/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential }),
+          });
+          const data = await r.json();
+          if (data.ok) {
+            onAuthSuccess(data);
+          } else {
+            showAuthMsg('auth-login-msg', 'Google sign-in failed.');
+          }
+        } catch { showAuthMsg('auth-login-msg', 'Network error.'); }
+      },
+    });
+    google.accounts.id.renderButton(document.getElementById('google-signin-btn'), {
+      theme: 'filled_black', size: 'large', text: 'signin_with', width: 280,
+    });
+  }
+
+  // Google script may load after DOMContentLoaded
+  if (window.google) {
+    initGoogleSignIn();
+  } else {
+    window.addEventListener('load', initGoogleSignIn);
+  }
+
+  // Account modal — open/close
+  accountBtn.addEventListener('click', () => openAccountOverlay());
+  accountCloseBtn.addEventListener('click', () => {
+    accountOverlay.classList.add('hidden');
+    pendingCampaignAfterAuth = false;
+  });
+
+  // Change name (when logged in)
   accountNewNameBtn.addEventListener('click', async () => {
     const newName = accountNewNameInput.value.trim().slice(0, 20);
     if (!newName) return;
     accountNewNameBtn.disabled = true;
-    const result = await registerPlayer(newName);
-    accountNewNameBtn.disabled = false;
-    if (!result.ok) {
-      accountChangeMsg.textContent = result.error === 'taken' ? 'Name already taken.' : 'Error, try again.';
-      accountChangeMsg.style.color = '#e94560';
-      accountChangeMsg.style.display = '';
-    }
-    // On success registerPlayer already closes modal and refreshes; nothing to do here
-  });
-
-  // Copy recovery code
-  accountCopyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(playerClaimCode || '').catch(() => {});
-    accountCopyBtn.textContent = 'Copied!';
-    setTimeout(() => { accountCopyBtn.textContent = 'Copy'; }, 1500);
-  });
-
-  // Restore account
-  accountClaimBtn.addEventListener('click', async () => {
-    const code = accountClaimInput.value.trim().toLowerCase();
-    if (!code) return;
-    accountClaimBtn.disabled = true;
     try {
-      const r = await fetch('/claim', {
+      const r = await fetch('/account/rename', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ claimCode: code, newToken: getToken() }),
+        headers: authHeaders(),
+        body: JSON.stringify({ nickname: newName }),
       });
       const data = await r.json();
       if (data.ok) {
-        playerRegistered = true;
-        playerClaimCode  = data.claimCode;
-        cfgNickname.value = data.nickname;
-        localStorage.setItem(LS.nickname, data.nickname);
-        const serverLevel = data.campaignLevel || 0;
-        const localLevel  = parseInt(localStorage.getItem(LS.campaignLevel) || '0');
-        if (serverLevel > localLevel) localStorage.setItem(LS.campaignLevel, serverLevel);
+        setJWT(data.token);
+        cfgNickname.value = newName;
+        localStorage.setItem(LS.nickname, newName);
         lockNickname();
-        updateRankedAvailability();
         updateAccountBtn();
-        accountOverlay.classList.add('hidden');
-        if (pendingSolve) {
-          postSolve(pendingSolve.time);
-          pendingSolve = null;
-          hide(anonPrompt);
-        }
-        if (pendingCampaignAfterLogin) {
-          pendingCampaignAfterLogin = false;
-          openCampaignOverview();
-        }
+        accountNicknameDisplay.textContent = newName;
+        accountChangeMsg.textContent = 'Name updated.';
+        accountChangeMsg.style.color = '#4ecca3';
+        accountChangeMsg.style.display = '';
+        accountNewNameInput.value = '';
       } else {
-        accountClaimMsg.textContent = 'Recovery code not found.';
-        accountClaimMsg.style.color = '#e94560';
-        accountClaimMsg.style.display = '';
+        const msgs = { nickname_taken: 'Name already taken.', nickname_invalid: 'Name must be 2–20 characters.' };
+        showAuthMsg('account-change-msg', msgs[data.error] || 'Error — try again.');
       }
-    } catch {
-      accountClaimMsg.textContent = 'Network error.';
-      accountClaimMsg.style.color = '#e94560';
-      accountClaimMsg.style.display = '';
-    }
-    accountClaimBtn.disabled = false;
+    } catch { showAuthMsg('account-change-msg', 'Network error.'); }
+    accountNewNameBtn.disabled = false;
   });
-  accountClaimInput.addEventListener('keydown', e => { if (e.key === 'Enter') accountClaimBtn.click(); });
+  accountNewNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') accountNewNameBtn.click(); });
 
-  // Claim code one-time modal
-  claimCodeCopyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(claimCodeDisplay.textContent).catch(() => {});
-    claimCodeCopyBtn.textContent = 'Copied!';
-    setTimeout(() => { claimCodeCopyBtn.textContent = 'Copy'; }, 1500);
+  // Sign out
+  document.getElementById('auth-signout-btn').addEventListener('click', () => {
+    clearJWT();
+    playerRegistered  = false;
+    cfgNickname.value = '';
+    localStorage.removeItem(LS.nickname);
+    lockNickname();
+    updateRankedAvailability();
+    updateAccountBtn();
+    accountOverlay.classList.add('hidden');
   });
-  claimCodeOkBtn.addEventListener('click', () => { claimOverlay.classList.add('hidden'); });
 
   window.addEventListener('resize', () => {
     const cols = Math.min(20, Math.max(1, parseInt(cfgWidth.value) || 4));

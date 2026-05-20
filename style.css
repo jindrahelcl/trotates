@@ -563,7 +563,7 @@ main {
 
 #campaign-next-btn { background: #4ecca3; color: #1a1a2e; }
 
-/* ── Account ───────────────────────────────────────────────────────────── */
+/* ── Account / Auth ────────────────────────────────────────────────────── */
 .player-widget {
   display: flex;
   align-items: center;
@@ -601,36 +601,103 @@ main {
 
 .anon-account-btn:hover { opacity: 0.8; }
 
-.account-status {
-  color: #aaa;
-  margin-bottom: 12px;
+.overlay-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 1.1rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  line-height: 1;
 }
 
-.claim-code-box {
+.overlay-close-btn:hover { color: #eee; }
+
+/* Auth tabs */
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #0f3460;
+}
+
+.auth-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #666;
+  font-size: 0.9rem;
+  padding: 6px 18px;
+  margin-bottom: -1px;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.auth-tab:hover { color: #aaa; }
+.auth-tab.active { color: #eee; border-bottom-color: #4ecca3; }
+
+/* Auth form */
+.auth-form-group {
+  margin-bottom: 10px;
+}
+
+.auth-form-group input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border-radius: 5px;
+  border: 1px solid #0f3460;
+  background: #1a1a2e;
+  color: #eee;
+  font-size: 0.9rem;
+}
+
+.auth-form-group input:focus {
+  outline: none;
+  border-color: #4ecca3;
+}
+
+.auth-submit-btn {
+  width: 100%;
+  background: #e94560;
+  color: #fff;
+  padding: 10px;
+  font-size: 0.95rem;
+  margin-top: 4px;
+  border-radius: 5px;
+}
+
+.auth-submit-btn:hover { opacity: 0.85; }
+
+.auth-divider {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  margin: 16px 0 12px;
+  color: #444;
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
   background: #0f3460;
-  border-radius: 6px;
-  padding: 8px 12px;
-  margin: 8px 0 16px;
-  font-family: monospace;
-  font-size: 1.1rem;
-  letter-spacing: 1px;
-  color: #4ecca3;
+}
+
+#google-signin-btn {
+  display: flex;
   justify-content: center;
+  min-height: 44px;
 }
 
-.claim-code-box button {
-  padding: 4px 10px;
-  font-size: 0.75rem;
-  background: #1a1a2e;
+/* Account panel (logged in) */
+.account-status {
   color: #aaa;
-}
-
-.claim-code-note {
-  font-size: 0.78rem;
-  color: #555;
   margin-bottom: 16px;
 }
 
@@ -641,23 +708,11 @@ main {
   text-align: left;
 }
 
-.account-note {
-  color: #666;
-  font-size: 0.85rem;
-  margin-bottom: 12px;
-}
-
-.account-restore-section {
-  border-top: 1px solid #0f3460;
-  padding-top: 14px;
-  margin-top: 4px;
-  margin-bottom: 14px;
-}
-
 .claim-input-row {
   display: flex;
   gap: 8px;
   margin-top: 8px;
+  margin-bottom: 4px;
 }
 
 .claim-input-row input {
@@ -668,12 +723,11 @@ main {
   background: #1a1a2e;
   color: #eee;
   font-size: 0.85rem;
-  font-family: monospace;
 }
 
 .claim-input-row input:focus {
   outline: none;
-  border-color: #e94560;
+  border-color: #4ecca3;
 }
 
 .claim-input-row button {
@@ -685,24 +739,21 @@ main {
 
 .account-msg {
   font-size: 0.82rem;
-  margin-top: 8px;
+  margin-top: 6px;
   text-align: left;
 }
 
-#account-close-btn {
+.auth-signout-btn {
   width: 100%;
   background: #0f3460;
-  color: #eee;
-  padding: 10px;
+  color: #aaa;
+  padding: 9px;
+  margin-top: 18px;
+  border-radius: 5px;
+  font-size: 0.85rem;
 }
 
-#claim-code-ok-btn {
-  width: 100%;
-  background: #e94560;
-  color: #fff;
-  padding: 10px;
-  font-size: 1rem;
-}
+.auth-signout-btn:hover { color: #eee; }
 
 .cz-outline { fill: #1a2744; stroke: #4ecca3; stroke-width: 1; }
 .cz-route   { fill: none; stroke: #4ecca355; stroke-width: 1.5; stroke-dasharray: 4 3; }
