@@ -23,8 +23,9 @@ function loadEnv(filePath) {
 
 loadEnv(path.join(__dirname, '.env'));
 
-// ── Auth (must require after .env is loaded) ──────────────────────────────
+// ── Auth + DB (must require after .env is loaded) ─────────────────────────
 const auth = require('./auth');
+const db   = require('./db');
 
 const API_KEY = process.env.MAPY_API_KEY;
 if (!API_KEY) {
@@ -189,210 +190,33 @@ function handleResolve(res, code) {
 }
 
 // ── Players ───────────────────────────────────────────────────────────────
-// players.json: { "<token>": { nickname, claimCode, campaignLevel, createdAt },
-//                 "_nicknames": { "alice": "<token>" },
-//                 "_claimCodes": { "bafoc-emidu-kalev": "<token>" } }
-const PLAYERS_FILE = path.join(__dirname, 'players.json');
-
-function readPlayers() {
-  try {
-    const data = JSON.parse(fs.readFileSync(PLAYERS_FILE, 'utf8'));
-    if (!data._nicknames)  data._nicknames  = {};
-    if (!data._claimCodes) data._claimCodes = {};
-    return data;
-  } catch {
-    return { _nicknames: {}, _claimCodes: {} };
-  }
-}
-
-function writePlayers(data) {
-  fs.writeFileSync(PLAYERS_FILE, JSON.stringify(data, null, 2));
-}
-
-function renameInLeaderboard(oldNick, newNick) {
-  const data = readLeaderboard();
-  let changed = false;
-  for (const entries of Object.values(data.locations)) {
-    for (const entry of entries) {
-      if (entry.nickname === oldNick) { entry.nickname = newNick; changed = true; }
-    }
-  }
-  if (data.wins[oldNick] !== undefined) {
-    data.wins[newNick] = (data.wins[newNick] || 0) + data.wins[oldNick];
-    delete data.wins[oldNick];
-    changed = true;
-  }
-  if (changed) writeLeaderboard(data);
-}
-
-function generateClaimCode() {
-  const groups = [];
-  for (let g = 0; g < 3; g++) {
-    let s = '';
-    for (let i = 0; i < 5; i++)
-      s += i % 2 === 0
-        ? CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)]
-        : VOWELS[Math.floor(Math.random() * VOWELS.length)];
-    groups.push(s);
-  }
-  return groups.join('-');
-}
-
-function extractToken(req) {
-  const auth = req.headers['authorization'] || '';
-  const m = auth.match(/^Bearer\s+(.+)$/i);
-  return m ? m[1].trim() : null;
-}
-
-function isValidToken(t) {
-  return typeof t === 'string' && /^[0-9a-f-]{36}$/.test(t);
-}
-
-function handleRegister(req, res) {
-  let body = '';
-  req.on('data', chunk => { body += chunk; });
-  req.on('end', () => {
-    try {
-      const { token, nickname } = JSON.parse(body);
-      const nick = String(nickname || '').trim().slice(0, 20);
-      if (!nick || !isValidToken(token)) throw new Error();
-
-      const players = readPlayers();
-
-      // Token already registered
-      if (players[token]) {
-        const player = players[token];
-        if (player.nickname === nick) {
-          // Idempotent
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, claimCode: player.claimCode, isNew: false }));
-          return;
-        }
-        // Nickname change: check new name not taken by someone else
-        if (players._nicknames[nick] && players._nicknames[nick] !== token) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, error: 'taken' }));
-          return;
-        }
-        const oldNick = player.nickname;
-        delete players._nicknames[oldNick];
-        player.nickname = nick;
-        players._nicknames[nick] = token;
-        writePlayers(players);
-        renameInLeaderboard(oldNick, nick);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, claimCode: player.claimCode, isNew: false }));
-        return;
-      }
-
-      // New token: check nickname availability
-      if (players._nicknames[nick]) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, error: 'taken' }));
-        return;
-      }
-
-      let claimCode;
-      let attempts = 0;
-      do {
-        claimCode = generateClaimCode();
-        if (++attempts > 1000) throw new Error('claim code space exhausted');
-      } while (players._claimCodes[claimCode]);
-
-      players[token] = { nickname: nick, claimCode, campaignLevel: 0, createdAt: new Date().toISOString() };
-      players._nicknames[nick] = token;
-      players._claimCodes[claimCode] = token;
-      writePlayers(players);
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, claimCode, isNew: true }));
-    } catch {
-      res.writeHead(400);
-      res.end('Bad request');
-    }
-  });
-}
-
-function handleClaim(req, res) {
-  let body = '';
-  req.on('data', chunk => { body += chunk; });
-  req.on('end', () => {
-    try {
-      const { claimCode, newToken } = JSON.parse(body);
-      if (!claimCode || !isValidToken(newToken)) throw new Error();
-
-      const players = readPlayers();
-      const code = String(claimCode).trim().toLowerCase();
-      const oldToken = players._claimCodes[code];
-
-      if (!oldToken) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, error: 'not_found' }));
-        return;
-      }
-
-      const player = players[oldToken];
-
-      if (oldToken === newToken) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, nickname: player.nickname, campaignLevel: player.campaignLevel, claimCode: player.claimCode }));
-        return;
-      }
-
-      // If newToken was previously registered under a different name, clean it up
-      if (players[newToken]) {
-        const old = players[newToken];
-        delete players._nicknames[old.nickname];
-        delete players._claimCodes[old.claimCode];
-        delete players[newToken];
-      }
-
-      players[newToken] = player;
-      delete players[oldToken];
-      players._nicknames[player.nickname] = newToken;
-      players._claimCodes[player.claimCode] = newToken;
-      writePlayers(players);
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, nickname: player.nickname, campaignLevel: player.campaignLevel, claimCode: player.claimCode }));
-    } catch {
-      res.writeHead(400);
-      res.end('Bad request');
-    }
-  });
-}
 
 function handleGetMe(req, res) {
-  const token = extractToken(req);
-  const players = readPlayers();
-  const player = token && players[token];
+  const token   = auth.extractToken(req);
+  const payload = token ? auth.verifyToken(token) : null;
+  const player  = payload ? db.findById(payload.sub) : null;
+  res.writeHead(200, { 'Content-Type': 'application/json' });
   if (!player) {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ registered: false }));
     return;
   }
-  res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
-    registered: true,
-    nickname: player.nickname,
-    campaignLevel: player.campaignLevel,
-    claimCode: player.claimCode,
+    registered:    true,
+    nickname:      player.nickname,
+    campaignLevel: player.campaign_level,
   }));
 }
 
 function handleCampaignProgress(req, res) {
-  const token = extractToken(req);
-  if (!token) { res.writeHead(401); res.end(); return; }
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
   let body = '';
   req.on('data', chunk => { body += chunk; });
   req.on('end', () => {
     try {
       const { level } = JSON.parse(body);
       if (typeof level !== 'number' || level < 0) throw new Error();
-      const players = readPlayers();
-      if (!players[token]) { res.writeHead(401); res.end(); return; }
-      players[token].campaignLevel = Math.max(players[token].campaignLevel || 0, Math.round(level));
-      writePlayers(players);
+      db.updateCampaignLevel(player.id, Math.round(level));
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
     } catch {
@@ -480,12 +304,13 @@ function handlePostLeaderboard(req, res) {
       if (typeof time !== 'number' || typeof moves !== 'number') throw new Error();
       const nick = String(nickname || '').trim().slice(0, 20) || 'anonymous';
 
-      // Verify token if the nickname is registered
+      // Verify JWT if the nickname is not anonymous
       if (nick !== 'anonymous') {
-        const token = extractToken(req);
-        const players = readPlayers();
-        const registeredToken = players._nicknames[nick];
-        if (registeredToken && registeredToken !== token) {
+        const token   = auth.extractToken(req);
+        const payload = token ? auth.verifyToken(token) : null;
+        const player  = payload ? db.findById(payload.sub) : null;
+        // Registered nickname requires a matching JWT
+        if (db.findByNickname(nick) && (!player || player.nickname !== nick)) {
           res.writeHead(401);
           res.end('Unauthorized');
           return;
@@ -529,12 +354,11 @@ function handleRandomPlayed(req, query, res) {
   const w    = parseInt(params.get('w'));
   const h    = parseInt(params.get('h'));
 
-  // Prefer token-based identity; fall back to nick query param
-  const token = extractToken(req);
-  const players = readPlayers();
-  const nick = (token && players[token])
-    ? players[token].nickname
-    : (params.get('nick') || '').trim();
+  // Prefer JWT identity; fall back to nick query param
+  const token   = auth.extractToken(req);
+  const payload = token ? auth.verifyToken(token) : null;
+  const player  = payload ? db.findById(payload.sub) : null;
+  const nick    = player ? player.nickname : (params.get('nick') || '').trim();
 
   const data = readLeaderboard();
   const suffix = `,${z},${w},${h}`;
@@ -600,14 +424,6 @@ const server = http.createServer((req, res) => {
 
   if (url === '/shorten' && req.method === 'POST') {
     return handleShorten(req, res);
-  }
-
-  if (url === '/register' && req.method === 'POST') {
-    return handleRegister(req, res);
-  }
-
-  if (url === '/claim' && req.method === 'POST') {
-    return handleClaim(req, res);
   }
 
   if (url === '/me' && req.method === 'GET') {
