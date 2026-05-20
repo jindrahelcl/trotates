@@ -1239,9 +1239,9 @@
     render(cols);
   });
 
-  // Show auth modal on load if not logged in (after fetchMe settles)
+  // Redirect to welcome page if not logged in
   fetchMe().then(() => {
-    if (!playerRegistered) openAccountOverlay();
+    if (!playerRegistered) location.href = '/welcome?next=' + encodeURIComponent(location.pathname + location.search);
   });
 
   // Resolve short URL on page load

@@ -1,0 +1,269 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --tile-size: 96px;
+  --grid-cols: 5;
+  --grid-rows: 5;
+  --accent: #e94560;
+  --accent2: #4ecca3;
+  --bg: #1a1a2e;
+  --panel: #16213e;
+  --border: #0f3460;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  background: var(--bg);
+  color: #eee;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+
+.welcome-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.welcome-auth {
+  flex: 0 0 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 40px;
+  background: var(--panel);
+  z-index: 1;
+}
+
+.welcome-visual {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--bg);
+  position: relative;
+}
+
+/* fade edges of the tile grid */
+.welcome-visual::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 30%, var(--bg) 80%);
+  pointer-events: none;
+}
+
+/* ── Brand ───────────────────────────────────────────────────────────────── */
+
+.welcome-brand {
+  margin-bottom: 36px;
+}
+
+.welcome-brand h1 {
+  font-size: 2rem;
+  letter-spacing: 1px;
+  color: #eee;
+}
+
+.welcome-brand h1 span {
+  color: var(--accent);
+}
+
+.welcome-tagline {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #888;
+}
+
+/* ── Auth tabs ───────────────────────────────────────────────────────────── */
+
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.auth-tab {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 0.95rem;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s;
+}
+
+.auth-tab.active {
+  color: var(--accent2);
+  border-bottom-color: var(--accent2);
+}
+
+.auth-tab:hover:not(.active) {
+  color: #ccc;
+}
+
+/* ── Form ────────────────────────────────────────────────────────────────── */
+
+.auth-form-group {
+  margin-bottom: 12px;
+}
+
+.auth-form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: #eee;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.auth-form-group input:focus {
+  border-color: var(--accent2);
+}
+
+.auth-submit-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 11px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.auth-submit-btn:hover {
+  opacity: 0.85;
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.auth-msg {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.auth-msg.ok {
+  color: var(--accent2);
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 16px;
+  color: #555;
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Google button ───────────────────────────────────────────────────────── */
+
+#google-signin-btn {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+  min-height: 44px;
+}
+
+/* ── Skip ────────────────────────────────────────────────────────────────── */
+
+.auth-skip-btn {
+  width: 100%;
+  padding: 9px;
+  background: none;
+  border: 1px solid var(--border);
+  color: #888;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.auth-skip-btn:hover {
+  color: #ccc;
+  border-color: #4ecca360;
+}
+
+/* ── Tile stage ──────────────────────────────────────────────────────────── */
+
+.tile-stage {
+  perspective: 900px;
+}
+
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-cols), var(--tile-size));
+  grid-template-rows: repeat(var(--grid-rows), var(--tile-size));
+  transform: rotateX(22deg) rotateZ(-8deg);
+  transform-style: preserve-3d;
+  gap: 2px;
+}
+
+.tile-cell {
+  width: var(--tile-size);
+  height: var(--tile-size);
+  background-size: cover;
+  background-position: center;
+  border-radius: 3px;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  will-change: transform;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+  .welcome-layout {
+    flex-direction: column;
+  }
+
+  .welcome-auth {
+    flex: none;
+    padding: 36px 24px 28px;
+  }
+
+  .welcome-visual {
+    flex: 0 0 220px;
+    order: -1;
+  }
+
+  :root {
+    --tile-size: 72px;
+    --grid-cols: 4;
+    --grid-rows: 3;
+  }
+}

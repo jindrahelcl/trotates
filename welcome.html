@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-client-id" content="837226827485-olv57cib909dfntcq77ienj46inq3hus.apps.googleusercontent.com">
+  <title>Map Rotator — Welcome</title>
+  <link rel="stylesheet" href="/welcome.css">
+  <script src="https://accounts.google.com/gsi/client" async></script>
+</head>
+<body>
+  <div class="welcome-layout">
+
+    <!-- Left: auth panel -->
+    <div class="welcome-auth">
+      <div class="welcome-brand">
+        <h1>Map<span>Rotator</span></h1>
+        <p class="welcome-tagline">Claim territory. Solve puzzles. Conquer Czechia.</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-auth-tab="login">Sign in</button>
+        <button class="auth-tab" data-auth-tab="register">Register</button>
+      </div>
+
+      <div id="auth-login-tab">
+        <div class="auth-form-group">
+          <input type="email" id="auth-email" placeholder="Email" autocomplete="email">
+        </div>
+        <div class="auth-form-group">
+          <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password">
+        </div>
+        <button id="auth-login-btn" class="auth-submit-btn">Sign in</button>
+        <p id="auth-login-msg" class="auth-msg" style="display:none"></p>
+      </div>
+
+      <div id="auth-register-tab" style="display:none">
+        <div class="auth-form-group">
+          <input type="text" id="auth-nickname" placeholder="Nickname" maxlength="20" autocomplete="off">
+        </div>
+        <div class="auth-form-group">
+          <input type="email" id="auth-reg-email" placeholder="Email" autocomplete="email">
+        </div>
+        <div class="auth-form-group">
+          <input type="password" id="auth-reg-password" placeholder="Password (min 8 chars)" autocomplete="new-password">
+        </div>
+        <button id="auth-register-btn" class="auth-submit-btn">Create account</button>
+        <p id="auth-register-msg" class="auth-msg" style="display:none"></p>
+      </div>
+
+      <div class="auth-divider"><span>or</span></div>
+      <div id="google-signin-btn"></div>
+
+      <button id="auth-skip-btn" class="auth-skip-btn">Play without account</button>
+    </div>
+
+    <!-- Right: animated tile grid -->
+    <div class="welcome-visual" aria-hidden="true">
+      <div class="tile-stage">
+        <div class="tile-grid" id="tile-grid"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/welcome.js"></script>
+</body>
+</html>

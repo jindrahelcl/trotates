@@ -1,0 +1,186 @@
+'use strict';
+
+// ── Tile grid animation ───────────────────────────────────────────────────
+
+const ZOOM   = 15;
+// Prague Castle area center tile
+const CENTER = { x: 17694, y: 11097 };
+
+function tileUrl(x, y) {
+  return `/tiles/outdoor/${ZOOM}/${x}/${y}`;
+}
+
+function buildGrid() {
+  const style  = getComputedStyle(document.documentElement);
+  const cols   = parseInt(style.getPropertyValue('--grid-cols')) || 5;
+  const rows   = parseInt(style.getPropertyValue('--grid-rows')) || 5;
+  const grid   = document.getElementById('tile-grid');
+  const startX = CENTER.x - Math.floor(cols / 2);
+  const startY = CENTER.y - Math.floor(rows / 2);
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'tile-cell';
+      cell.style.backgroundImage = `url(${tileUrl(startX + col, startY + row)})`;
+      grid.appendChild(cell);
+    }
+  }
+
+  scheduleSpin(grid);
+}
+
+function scheduleSpin(grid) {
+  const cells = Array.from(grid.children);
+
+  function spinOne() {
+    const cell = cells[Math.floor(Math.random() * cells.length)];
+    const deg  = (Math.floor(Math.random() * 3) + 1) * 90;
+    const cur  = parseInt(cell.dataset.rot || '0');
+    const next = cur + deg;
+    cell.dataset.rot = next;
+    cell.style.transform = `rotateY(${next}deg)`;
+
+    setTimeout(spinOne, 400 + Math.random() * 800);
+  }
+
+  // stagger initial spins across the grid
+  cells.forEach((_, i) => {
+    setTimeout(spinOne, i * 120 + Math.random() * 300);
+  });
+}
+
+buildGrid();
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+
+const JWT_KEY = 'mapRotatorJWT';
+
+function setJWT(token) {
+  localStorage.setItem(JWT_KEY, token);
+}
+
+function redirect() {
+  const next = new URLSearchParams(location.search).get('next') || '/';
+  location.href = next;
+}
+
+function showMsg(id, text, isOk = false) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'auth-msg' + (isOk ? ' ok' : '');
+  el.style.display = '';
+}
+
+function hideMsg(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.auth-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.authTab;
+    document.querySelectorAll('.auth-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('auth-login-tab').style.display    = tab === 'login'    ? '' : 'none';
+    document.getElementById('auth-register-tab').style.display = tab === 'register' ? '' : 'none';
+  });
+});
+
+// ── Login ─────────────────────────────────────────────────────────────────
+
+document.getElementById('auth-login-btn').addEventListener('click', async () => {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn      = document.getElementById('auth-login-btn');
+  if (!email || !password) return;
+  btn.disabled = true;
+  hideMsg('auth-login-msg');
+  try {
+    const r    = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await r.json();
+    if (data.ok) { setJWT(data.token); redirect(); }
+    else {
+      const msgs = { not_found: 'No account with that email.', wrong_password: 'Wrong password.' };
+      showMsg('auth-login-msg', msgs[data.error] || 'Sign in failed.');
+    }
+  } catch { showMsg('auth-login-msg', 'Network error.'); }
+  btn.disabled = false;
+});
+
+document.getElementById('auth-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('auth-login-btn').click();
+});
+
+// ── Register ──────────────────────────────────────────────────────────────
+
+document.getElementById('auth-register-btn').addEventListener('click', async () => {
+  const nickname = document.getElementById('auth-nickname').value.trim();
+  const email    = document.getElementById('auth-reg-email').value.trim();
+  const password = document.getElementById('auth-reg-password').value;
+  const btn      = document.getElementById('auth-register-btn');
+  if (!nickname || !email || !password) return;
+  btn.disabled = true;
+  hideMsg('auth-register-msg');
+  try {
+    const r    = await fetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, email, password }),
+    });
+    const data = await r.json();
+    if (data.ok) { setJWT(data.token); redirect(); }
+    else {
+      const msgs = {
+        nickname_taken:   'That nickname is already taken.',
+        email_taken:      'An account with that email already exists.',
+        nickname_invalid: 'Nickname must be 2–20 characters.',
+        password_short:   'Password must be at least 8 characters.',
+      };
+      showMsg('auth-register-msg', msgs[data.error] || 'Registration failed.');
+    }
+  } catch { showMsg('auth-register-msg', 'Network error.'); }
+  btn.disabled = false;
+});
+
+// ── Google One Tap ────────────────────────────────────────────────────────
+
+const clientId = document.querySelector('meta[name="google-client-id"]')?.content;
+
+if (clientId && window.google) {
+  initGoogle();
+} else {
+  document.querySelector('script[src*="gsi"]')?.addEventListener('load', initGoogle);
+}
+
+function initGoogle() {
+  if (!window.google || !clientId) return;
+  google.accounts.id.initialize({
+    client_id: clientId,
+    callback: async ({ credential }) => {
+      try {
+        const r    = await fetch('/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ credential }),
+        });
+        const data = await r.json();
+        if (data.ok) { setJWT(data.token); redirect(); }
+        else showMsg('auth-login-msg', 'Google sign-in failed.');
+      } catch { showMsg('auth-login-msg', 'Network error.'); }
+    },
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('google-signin-btn'),
+    { theme: 'filled_black', size: 'large', width: 340 }
+  );
+}
+
+// ── Skip ──────────────────────────────────────────────────────────────────
+
+document.getElementById('auth-skip-btn').addEventListener('click', redirect);
