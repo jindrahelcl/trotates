@@ -178,8 +178,8 @@ function initMap() {
 
   // CZ bounds for max viewport lock
   const czBounds = L.latLngBounds(
-    tileLatLng(wc.czTxMin, wc.czTyMax + 1, 15),
-    tileLatLng(wc.czTxMax + 1, wc.czTyMin, 15)
+    tilePureLatLng(wc.czTxMin, wc.czTyMax + 1, 15),
+    tilePureLatLng(wc.czTxMax + 1, wc.czTyMin, 15)
   );
 
   map = L.map('map', {
