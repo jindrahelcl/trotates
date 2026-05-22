@@ -24,9 +24,10 @@ function loadEnv(filePath) {
 loadEnv(path.join(__dirname, '.env'));
 
 // ── Auth + DB + World (must require after .env is loaded) ────────────────
-const auth  = require('./auth');
-const db    = require('./db');
-const WORLD = require('./world');
+const auth    = require('./auth');
+const db      = require('./db');
+const WORLD   = require('./world');
+const economy = require('./economy');
 
 const API_KEY = process.env.MAPY_API_KEY;
 if (!API_KEY) {
@@ -453,7 +454,24 @@ function handleRandomPlayed(req, query, res) {
 
 
 function handleWorldConfig(res) {
-  jsonOk(res, { zoom: WORLD.zoom, puzzleW: WORLD.puzzleW, puzzleH: WORLD.puzzleH });
+  jsonOk(res, {
+    zoom:    WORLD.zoom,
+    puzzleW: WORLD.puzzleW,
+    puzzleH: WORLD.puzzleH,
+    czTxMin: WORLD.czTxMin,
+    czTyMin: WORLD.czTyMin,
+    czTxMax: WORLD.czTxMax,
+    czTyMax: WORLD.czTyMax,
+  });
+}
+
+function handleGetBalance(req, res) {
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
+  const tiles = db.getTilesByOwner(player.id);
+  const balance = economy.currentBalance(player, tiles);
+  const rate    = economy.incomeRate(tiles);
+  jsonOk(res, { balance, incomeRate: rate, tileCount: tiles.length });
 }
 
 function handleWorldTiles(query, res) {
@@ -592,6 +610,10 @@ const server = http.createServer((req, res) => {
 
   if (url === '/world/config' && req.method === 'GET') {
     return handleWorldConfig(res);
+  }
+
+  if (url === '/economy/balance' && req.method === 'GET') {
+    return handleGetBalance(req, res);
   }
 
   if (url.startsWith('/world/tiles') && req.method === 'GET') {

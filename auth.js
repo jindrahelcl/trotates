@@ -2,6 +2,7 @@ const bcrypt         = require('bcryptjs');
 const jwt            = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const db             = require('./db');
+const spawn          = require('./spawn');
 
 const JWT_SECRET      = process.env.JWT_SECRET;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -85,6 +86,7 @@ function handleRegister(req, res) {
       if (db.findByEmail(mail))                             return ok(res, { ok: false, error: 'email_taken' });
 
       const player = db.createPlayer({ nickname: nick, email: mail, passwordHash: bcrypt.hashSync(pass, 10) });
+      spawn.spawnNewPlayer(player);
       ok(res, { ok: true, token: signToken(player), nickname: player.nickname });
     } catch { badRequest(res, 'bad_request'); }
   });
@@ -129,6 +131,7 @@ function handleGoogle(req, res) {
       // New player
       const nickname = deriveNickname(name);
       player = db.createPlayer({ nickname, email: email || null, googleId });
+      spawn.spawnNewPlayer(player);
       ok(res, { ok: true, token: signToken(player), nickname: player.nickname, isNew: true });
     } catch (e) {
       console.error('Google auth error:', e.message);

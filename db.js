@@ -34,6 +34,8 @@ db.exec(`
 db.exec(`CREATE INDEX IF NOT EXISTS idx_tiles_owner ON tiles(owner_id)`);
 
 try { db.exec('ALTER TABLE players ADD COLUMN hue INTEGER'); } catch { /* already exists */ }
+try { db.exec('ALTER TABLE players ADD COLUMN balance REAL NOT NULL DEFAULT 0'); } catch { /* already exists */ }
+try { db.exec('ALTER TABLE players ADD COLUMN balance_at TEXT'); } catch { /* already exists */ }
 
 // ── Lookups ───────────────────────────────────────────────────────────────────
 
@@ -72,7 +74,9 @@ const stmts = {
     'SELECT tiles.*, players.nickname as owner_nickname, players.hue as owner_hue FROM tiles ' +
     'JOIN players ON tiles.owner_id = players.id'
   ),
-  setHue: db.prepare('UPDATE players SET hue = ? WHERE id = ?'),
+  setHue:     db.prepare('UPDATE players SET hue = ? WHERE id = ?'),
+  setBalance: db.prepare('UPDATE players SET balance = ?, balance_at = ? WHERE id = ?'),
+  allTiles:   db.prepare('SELECT tx, ty, owner_id FROM tiles'),
 };
 
 function findById(id)           { return stmts.byId.get(id) || null; }
@@ -119,6 +123,8 @@ function claimTile(tx, ty, zoom, ownerId, bonus) {
 function getOwnerTileCount(ownerId)      { return stmts.getOwnerTileCount.get(ownerId).count; }
 function setHue(id, hue)                 { stmts.setHue.run(hue, id); }
 function getAllTiles()                    { return stmts.getAllTiles.all(); }
+function setBalance(id, balance, balanceAt) { stmts.setBalance.run(balance, balanceAt, id); }
+function getAllTilesForSpawn()            { return stmts.allTiles.all(); }
 
 // ── Migration from players.json ───────────────────────────────────────────────
 
@@ -168,4 +174,6 @@ module.exports = {
   getOwnerTileCount,
   getAllTiles,
   setHue,
+  setBalance,
+  getAllTilesForSpawn,
 };
