@@ -65,7 +65,9 @@ function starterClusterTiles(centerTx, centerTy, existingKeys = new Set()) {
   const bcx = ccx + bDir.dx, bcy = ccy + bDir.dy;
   const comp1 = [{cx:ccx,cy:ccy},{cx:bcx,cy:bcy}];
 
-  // Component 2: find C (not adjacent to A or B), then D adjacent to C but not to A or B
+  // Randomly pick layout: 2+2 or 3+1
+  const layout = Math.random() < 0.5 ? '2+2' : '3+1';
+
   let comp2 = null;
   for (let attempt = 0; attempt < 500 && !comp2; attempt++) {
     const cx = ccx + Math.round((Math.random()*2-1)*r)*4;
@@ -73,12 +75,23 @@ function starterClusterTiles(centerTx, centerTy, existingKeys = new Set()) {
     if (!inBounds(cx,cy)) continue;
     if (comp1.some(c => adjacent(c.cx,c.cy,cx,cy) || (c.cx===cx&&c.cy===cy))) continue;
 
-    const dCandidates = shuffle(DIRS.slice())
-      .map(d => ({cx:cx+d.dx, cy:cy+d.dy}))
-      .filter(d => inBounds(d.cx,d.cy) && !comp1.some(c => adjacent(c.cx,c.cy,d.cx,d.cy)));
-    if (dCandidates.length === 0) continue;
-
-    comp2 = [{cx,cy}, dCandidates[0]];
+    if (layout === '2+2') {
+      // C + D adjacent to C, neither adjacent to comp1
+      const dCandidates = shuffle(DIRS.slice())
+        .map(d => ({cx:cx+d.dx, cy:cy+d.dy}))
+        .filter(d => inBounds(d.cx,d.cy) && !comp1.some(c => adjacent(c.cx,c.cy,d.cx,d.cy)));
+      if (dCandidates.length === 0) continue;
+      comp2 = [{cx,cy}, dCandidates[0]];
+    } else {
+      // 3+1: extend comp1 with C adjacent to A or B, D is the singleton (cx,cy)
+      const extCandidates = shuffle(DIRS.slice())
+        .flatMap(d => comp1.map(c => ({cx:c.cx+d.dx, cy:c.cy+d.dy})))
+        .filter(e => inBounds(e.cx,e.cy) && !comp1.some(c=>c.cx===e.cx&&c.cy===e.cy) && !adjacent(e.cx,e.cy,cx,cy));
+      if (extCandidates.length === 0) continue;
+      const ext = extCandidates[Math.floor(Math.random()*extCandidates.length)];
+      comp1.push(ext); // grow comp1 to 3
+      comp2 = [{cx,cy}]; // singleton
+    }
   }
 
   const chunks = comp2 ? [...comp1, ...comp2] : comp1;
