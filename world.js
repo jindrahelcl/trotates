@@ -20,8 +20,9 @@ module.exports = {
   // Spawn
   spawnMinDist:      50,   // min tile distance from any existing claimed tile
   spawnMaxDist:      150,  // max tile distance (preferred band)
-  spawnClusterSize:  6,    // number of starter tiles per new player
-  spawnClusterRadius: 8,   // scatter radius for starter tiles
+  spawnClusterSize:   6,    // number of starter tiles per new player
+  spawnClusterChunks: 4,    // number of distinct chunks guaranteed to contain at least 1 tile
+  spawnChunkRadius:   2,    // radius in chunks for picking starter chunks
   spawnAnchors: [          // cold-start anchors — first N players land here
     { tx: 17697, ty: 11090 }, // Prague
     { tx: 17891, ty: 11256 }, // Brno

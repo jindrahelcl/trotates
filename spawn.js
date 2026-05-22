@@ -47,24 +47,43 @@ function findSpawnLocation(allTiles) {
   };
 }
 
-// Returns scattered starter tile positions around a center point.
+// Returns scattered starter tile positions: picks spawnClusterChunks chunks near
+// center (at least 1 tile each), then scatters remaining tiles across those chunks.
 function starterClusterTiles(centerTx, centerTy, existingKeys = new Set()) {
-  const tiles = [];
-  const used  = new Set(existingKeys);
-  const r     = WORLD.spawnClusterRadius;
+  const used = new Set(existingKeys);
+  const r    = WORLD.spawnChunkRadius;
+  const ccx  = Math.floor(centerTx / 4) * 4;
+  const ccy  = Math.floor(centerTy / 4) * 4;
 
-  const tryAdd = (tx, ty) => {
-    const key = `${tx},${ty}`;
-    if (!used.has(key) && inBounds(tx, ty)) { used.add(key); tiles.push({ tx, ty }); return true; }
-    return false;
+  // Pick distinct chunks within radius, seeding with the center chunk
+  const chunks     = [{ cx: ccx, cy: ccy }];
+  const usedChunks = new Set([`${ccx},${ccy}`]);
+  for (let attempts = 0; chunks.length < WORLD.spawnClusterChunks && attempts < 300; attempts++) {
+    const cx  = ccx + Math.round((Math.random() * 2 - 1) * r) * 4;
+    const cy  = ccy + Math.round((Math.random() * 2 - 1) * r) * 4;
+    const key = `${cx},${cy}`;
+    if (!usedChunks.has(key) && inBounds(cx, cy)) { usedChunks.add(key); chunks.push({ cx, cy }); }
+  }
+
+  const placeTileInChunk = (cx, cy) => {
+    for (let a = 0; a < 50; a++) {
+      const tx  = cx + Math.floor(Math.random() * 4);
+      const ty  = cy + Math.floor(Math.random() * 4);
+      const key = `${tx},${ty}`;
+      if (!used.has(key) && inBounds(tx, ty)) { used.add(key); return { tx, ty }; }
+    }
+    return null;
   };
 
-  tryAdd(centerTx, centerTy);
-
-  for (let attempts = 0; tiles.length < WORLD.spawnClusterSize && attempts < 500; attempts++) {
-    const tx = centerTx + Math.round((Math.random() * 2 - 1) * r);
-    const ty = centerTy + Math.round((Math.random() * 2 - 1) * r);
-    tryAdd(tx, ty);
+  const tiles = [];
+  for (const { cx, cy } of chunks) {
+    const t = placeTileInChunk(cx, cy);
+    if (t) tiles.push(t);
+  }
+  for (let a = 0; tiles.length < WORLD.spawnClusterSize && a < 200; a++) {
+    const { cx, cy } = chunks[Math.floor(Math.random() * chunks.length)];
+    const t = placeTileInChunk(cx, cy);
+    if (t) tiles.push(t);
   }
 
   return tiles;
