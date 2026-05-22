@@ -33,9 +33,37 @@ db.exec(`
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_tiles_owner ON tiles(owner_id)`);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS explored_tiles (
+    player_id   INTEGER NOT NULL REFERENCES players(id),
+    tx          INTEGER NOT NULL,
+    ty          INTEGER NOT NULL,
+    zoom        INTEGER NOT NULL,
+    explored_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (player_id, tx, ty, zoom)
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_explored_player ON explored_tiles(player_id)`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS solve_log (
+    id            INTEGER PRIMARY KEY,
+    player_id     INTEGER NOT NULL REFERENCES players(id),
+    tx            INTEGER NOT NULL,
+    ty            INTEGER NOT NULL,
+    zoom          INTEGER NOT NULL,
+    solve_time_ms INTEGER NOT NULL,
+    solved_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_solve_log_date ON solve_log(solved_at)`);
+
 try { db.exec('ALTER TABLE players ADD COLUMN hue INTEGER'); } catch { /* already exists */ }
 try { db.exec('ALTER TABLE players ADD COLUMN balance REAL NOT NULL DEFAULT 0'); } catch { /* already exists */ }
 try { db.exec('ALTER TABLE players ADD COLUMN balance_at TEXT'); } catch { /* already exists */ }
+try { db.exec('ALTER TABLE players ADD COLUMN movement_points INTEGER NOT NULL DEFAULT 0'); } catch { /* already exists */ }
 
 // ── Lookups ───────────────────────────────────────────────────────────────────
 
@@ -77,6 +105,15 @@ const stmts = {
   setHue:     db.prepare('UPDATE players SET hue = ? WHERE id = ?'),
   setBalance: db.prepare('UPDATE players SET balance = ?, balance_at = ? WHERE id = ?'),
   allTiles:   db.prepare('SELECT tx, ty, owner_id FROM tiles'),
+
+  exploreTile:         db.prepare('INSERT OR IGNORE INTO explored_tiles (player_id, tx, ty, zoom) VALUES (?, ?, ?, ?)'),
+  getExploredByPlayer: db.prepare('SELECT tx, ty, zoom, explored_at FROM explored_tiles WHERE player_id = ?'),
+  isExplored:          db.prepare('SELECT 1 FROM explored_tiles WHERE player_id = ? AND tx = ? AND ty = ? AND zoom = ?'),
+
+  logSolve:            db.prepare('INSERT INTO solve_log (player_id, tx, ty, zoom, solve_time_ms) VALUES (?, ?, ?, ?, ?)'),
+  getPrevDaySolveTimes: db.prepare("SELECT solve_time_ms FROM solve_log WHERE date(solved_at) = date('now', '-1 day')"),
+
+  addMovementPoints:   db.prepare('UPDATE players SET movement_points = movement_points + ? WHERE id = ?'),
 };
 
 function findById(id)           { return stmts.byId.get(id) || null; }
@@ -125,6 +162,15 @@ function setHue(id, hue)                 { stmts.setHue.run(hue, id); }
 function getAllTiles()                    { return stmts.getAllTiles.all(); }
 function setBalance(id, balance, balanceAt) { stmts.setBalance.run(balance, balanceAt, id); }
 function getAllTilesForSpawn()            { return stmts.allTiles.all(); }
+
+function exploreTile(playerId, tx, ty, zoom) { stmts.exploreTile.run(playerId, tx, ty, zoom); }
+function getExploredByPlayer(playerId)       { return stmts.getExploredByPlayer.all(playerId); }
+function isExplored(playerId, tx, ty, zoom)  { return !!stmts.isExplored.get(playerId, tx, ty, zoom); }
+
+function logSolve(playerId, tx, ty, zoom, solveTimeMs) { stmts.logSolve.run(playerId, tx, ty, zoom, solveTimeMs); }
+function getPrevDaySolveTimes()              { return stmts.getPrevDaySolveTimes.all().map(r => r.solve_time_ms); }
+
+function addMovementPoints(playerId, points) { stmts.addMovementPoints.run(points, playerId); }
 
 // ── Migration from players.json ───────────────────────────────────────────────
 
@@ -176,4 +222,10 @@ module.exports = {
   setHue,
   setBalance,
   getAllTilesForSpawn,
+  exploreTile,
+  getExploredByPlayer,
+  isExplored,
+  logSolve,
+  getPrevDaySolveTimes,
+  addMovementPoints,
 };

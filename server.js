@@ -24,10 +24,11 @@ function loadEnv(filePath) {
 loadEnv(path.join(__dirname, '.env'));
 
 // ── Auth + DB + World (must require after .env is loaded) ────────────────
-const auth    = require('./auth');
-const db      = require('./db');
-const WORLD   = require('./world');
-const economy = require('./economy');
+const auth       = require('./auth');
+const db         = require('./db');
+const WORLD      = require('./world');
+const economy    = require('./economy');
+const percentile = require('./percentile');
 
 const API_KEY = process.env.MAPY_API_KEY;
 if (!API_KEY) {
@@ -474,6 +475,50 @@ function handleGetBalance(req, res) {
   jsonOk(res, { balance, incomeRate: rate, tileCount: tiles.length });
 }
 
+function handleExplore(req, res) {
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { tx, ty, solveTimeMs } = JSON.parse(body);
+      if (typeof tx !== 'number' || typeof ty !== 'number' || typeof solveTimeMs !== 'number')
+        throw new Error();
+
+      const zoom   = WORLD.zoom;
+      const timeMs = Math.max(0, Math.round(solveTimeMs));
+
+      db.logSolve(player.id, tx, ty, zoom, timeMs);
+      db.exploreTile(player.id, tx, ty, zoom);
+      const points = percentile.scorePoints(timeMs);
+      db.addMovementPoints(player.id, points);
+
+      const tile  = db.getTile(tx, ty, zoom);
+      const owner = tile ? db.findById(tile.owner_id) : null;
+      const updated = db.findById(player.id);
+
+      jsonOk(res, {
+        pointsEarned:   points,
+        totalPoints:    updated.movement_points,
+        tileInfo: {
+          owned:          !!tile,
+          ownerNickname:  owner ? owner.nickname : null,
+          ownerHue:       owner ? owner.hue : null,
+        },
+      });
+    } catch {
+      res.writeHead(400); res.end('Bad request');
+    }
+  });
+}
+
+function handleGetExplored(req, res) {
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
+  jsonOk(res, db.getExploredByPlayer(player.id));
+}
+
 function handleWorldTiles(query, res) {
   const p    = new URLSearchParams(query);
   const zoom = WORLD.zoom;
@@ -614,6 +659,14 @@ const server = http.createServer((req, res) => {
 
   if (url === '/economy/balance' && req.method === 'GET') {
     return handleGetBalance(req, res);
+  }
+
+  if (url === '/world/explore' && req.method === 'POST') {
+    return handleExplore(req, res);
+  }
+
+  if (url === '/world/explored' && req.method === 'GET') {
+    return handleGetExplored(req, res);
   }
 
   if (url.startsWith('/world/tiles') && req.method === 'GET') {
