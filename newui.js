@@ -250,8 +250,15 @@ function createOwnershipLayer() {
         }
       }
 
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      // z15 tile grid (inner)
+      ctx.strokeStyle = 'rgba(180,180,200,0.12)';
       ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        ctx.beginPath(); ctx.moveTo(i * 64, 0); ctx.lineTo(i * 64, 256); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i * 64); ctx.lineTo(256, i * 64); ctx.stroke();
+      }
+      // chunk border (slightly brighter)
+      ctx.strokeStyle = 'rgba(180,180,200,0.22)';
       ctx.strokeRect(0.5, 0.5, 255, 255);
 
       return canvas;
