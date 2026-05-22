@@ -55,14 +55,20 @@ function starterClusterTiles(centerTx, centerTy, existingKeys = new Set()) {
   const ccx  = Math.floor(centerTx / 4) * 4;
   const ccy  = Math.floor(centerTy / 4) * 4;
 
-  // Pick distinct chunks within radius, seeding with the center chunk
+  const chunkTooClose = (cx, cy) =>
+    chunks.some(c => Math.abs(c.cx - cx) + Math.abs(c.cy - cy) < 8);
+
+  // Pick distinct chunks within radius with min 2-chunk gap between any pair
   const chunks     = [{ cx: ccx, cy: ccy }];
   const usedChunks = new Set([`${ccx},${ccy}`]);
-  for (let attempts = 0; chunks.length < WORLD.spawnClusterChunks && attempts < 300; attempts++) {
+  for (let attempts = 0; chunks.length < WORLD.spawnClusterChunks && attempts < 500; attempts++) {
     const cx  = ccx + Math.round((Math.random() * 2 - 1) * r) * 4;
     const cy  = ccy + Math.round((Math.random() * 2 - 1) * r) * 4;
     const key = `${cx},${cy}`;
-    if (!usedChunks.has(key) && inBounds(cx, cy)) { usedChunks.add(key); chunks.push({ cx, cy }); }
+    if (!usedChunks.has(key) && inBounds(cx, cy) && !chunkTooClose(cx, cy)) {
+      usedChunks.add(key);
+      chunks.push({ cx, cy });
+    }
   }
 
   const placeTileInChunk = (cx, cy) => {
