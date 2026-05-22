@@ -80,7 +80,7 @@ function hslStr(hue, s = '65%', l = '55%') {
 
 // ── Auth ───────────────────────────────────────────────────────────────────
 
-function getToken() { return localStorage.getItem('token'); }
+function getToken() { return localStorage.getItem('mapRotatorJWT'); }
 
 function authHeaders() {
   const t = getToken();
