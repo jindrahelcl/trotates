@@ -215,12 +215,7 @@ function initMap() {
 
   // Map events
   map.on('moveend', loadTilesInView);
-  let _movePending = false;
-  map.on('move', () => {
-    if (_movePending) return;
-    _movePending = true;
-    requestAnimationFrame(() => { _movePending = false; fogLayer.redraw(); redrawHover(); });
-  });
+  map.on('move',    () => { fogLayer.redraw(); redrawHover(); });
   map.on('click',   onMapClick);
 
   loadTilesInView();
