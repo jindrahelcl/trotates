@@ -47,6 +47,18 @@ db.exec(`
 db.exec(`CREATE INDEX IF NOT EXISTS idx_explored_player ON explored_tiles(player_id)`);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS settlers (
+    id        INTEGER PRIMARY KEY,
+    player_id INTEGER NOT NULL REFERENCES players(id),
+    tx        INTEGER NOT NULL,
+    ty        INTEGER NOT NULL,
+    status    TEXT    NOT NULL DEFAULT 'idle'
+  )
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_settlers_player ON settlers(player_id)`);
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS solve_log (
     id            INTEGER PRIMARY KEY,
     player_id     INTEGER NOT NULL REFERENCES players(id),
@@ -113,7 +125,13 @@ const stmts = {
   logSolve:            db.prepare('INSERT INTO solve_log (player_id, tx, ty, zoom, solve_time_ms) VALUES (?, ?, ?, ?, ?)'),
   getPrevDaySolveTimes: db.prepare("SELECT solve_time_ms FROM solve_log WHERE date(solved_at) = date('now', '-1 day')"),
 
-  addMovementPoints:   db.prepare('UPDATE players SET movement_points = movement_points + ? WHERE id = ?'),
+  addMovementPoints:      db.prepare('UPDATE players SET movement_points = movement_points + ? WHERE id = ?'),
+  spendMovementPoints:    db.prepare('UPDATE players SET movement_points = movement_points - ? WHERE id = ?'),
+
+  createSettler:          db.prepare('INSERT INTO settlers (player_id, tx, ty) VALUES (?, ?, ?)'),
+  getSettlersByPlayer:    db.prepare('SELECT * FROM settlers WHERE player_id = ?'),
+  getSettler:             db.prepare('SELECT * FROM settlers WHERE id = ?'),
+  moveSettler:            db.prepare('UPDATE settlers SET tx = ?, ty = ?, status = ? WHERE id = ?'),
 };
 
 function findById(id)           { return stmts.byId.get(id) || null; }
@@ -170,7 +188,13 @@ function isExplored(playerId, tx, ty, zoom)  { return !!stmts.isExplored.get(pla
 function logSolve(playerId, tx, ty, zoom, solveTimeMs) { stmts.logSolve.run(playerId, tx, ty, zoom, solveTimeMs); }
 function getPrevDaySolveTimes()              { return stmts.getPrevDaySolveTimes.all().map(r => r.solve_time_ms); }
 
-function addMovementPoints(playerId, points) { stmts.addMovementPoints.run(points, playerId); }
+function addMovementPoints(playerId, points)   { stmts.addMovementPoints.run(points, playerId); }
+function spendMovementPoints(playerId, points) { stmts.spendMovementPoints.run(points, playerId); }
+
+function createSettler(playerId, tx, ty)       { return stmts.createSettler.run(playerId, tx, ty).lastInsertRowid; }
+function getSettlersByPlayer(playerId)         { return stmts.getSettlersByPlayer.all(playerId); }
+function getSettler(id)                        { return stmts.getSettler.get(id) || null; }
+function moveSettler(id, tx, ty, status)       { stmts.moveSettler.run(tx, ty, status, id); }
 
 // ── Migration from players.json ───────────────────────────────────────────────
 
@@ -228,4 +252,9 @@ module.exports = {
   logSolve,
   getPrevDaySolveTimes,
   addMovementPoints,
+  spendMovementPoints,
+  createSettler,
+  getSettlersByPlayer,
+  getSettler,
+  moveSettler,
 };

@@ -83,6 +83,9 @@ function spawnNewPlayer(player) {
 
   const now = new Date().toISOString();
   db.setBalance(player.id, WORLD.startingBalance, now);
+
+  // Place starter settler on the spawn center
+  db.createSettler(player.id, center.tx, center.ty);
 }
 
 module.exports = { findSpawnLocation, starterClusterTiles, spawnNewPlayer };

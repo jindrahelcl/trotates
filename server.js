@@ -519,6 +519,76 @@ function handleGetExplored(req, res) {
   jsonOk(res, db.getExploredByPlayer(player.id));
 }
 
+// Bresenham path between two tiles (no diagonals — horizontal steps first, then vertical within each step)
+function bresenhamPath(x0, y0, x1, y1) {
+  const path = [];
+  const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+  const sx = x1 >= x0 ? 1 : -1, sy = y1 >= y0 ? 1 : -1;
+  let err = dx - dy, x = x0, y = y0;
+  while (true) {
+    path.push({ tx: x, ty: y });
+    if (x === x1 && y === y1) break;
+    const e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; x += sx; }
+    else           { err += dx; y += sy; }
+  }
+  return path;
+}
+
+function handleGetSettlers(req, res) {
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
+  jsonOk(res, db.getSettlersByPlayer(player.id));
+}
+
+function handleMoveSettler(req, res) {
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { settlerId, tx, ty } = JSON.parse(body);
+      if (typeof settlerId !== 'number' || typeof tx !== 'number' || typeof ty !== 'number')
+        throw new Error();
+
+      const settler = db.getSettler(settlerId);
+      if (!settler || settler.player_id !== player.id)
+        return jsonOk(res, { ok: false, error: 'not_found' });
+
+      if (!db.isExplored(player.id, tx, ty, WORLD.zoom))
+        return jsonOk(res, { ok: false, error: 'not_explored' });
+
+      const path = bresenhamPath(settler.tx, settler.ty, tx, ty);
+      const cost = path.length - 1; // exclude starting tile
+
+      if (player.movement_points < cost)
+        return jsonOk(res, { ok: false, error: 'insufficient_points', cost, have: player.movement_points });
+
+      // Check for enemy tiles on path (exclude start and end)
+      const enemyTiles = [];
+      for (const { tx: ptx, ty: pty } of path.slice(1, -1)) {
+        const tile = db.getTile(ptx, pty, WORLD.zoom);
+        if (tile && tile.owner_id !== player.id) {
+          const owner = db.findById(tile.owner_id);
+          enemyTiles.push({ tx: ptx, ty: pty, ownerNickname: owner ? owner.nickname : null });
+        }
+      }
+
+      if (enemyTiles.length > 0)
+        return jsonOk(res, { ok: false, error: 'enemy_territory', enemyTiles, cost, path });
+
+      db.spendMovementPoints(player.id, cost);
+      db.moveSettler(settlerId, tx, ty, 'idle');
+
+      const updated = db.findById(player.id);
+      jsonOk(res, { ok: true, cost, remainingPoints: updated.movement_points, path });
+    } catch {
+      res.writeHead(400); res.end('Bad request');
+    }
+  });
+}
+
 function handleWorldTiles(query, res) {
   const p    = new URLSearchParams(query);
   const zoom = WORLD.zoom;
@@ -667,6 +737,14 @@ const server = http.createServer((req, res) => {
 
   if (url === '/world/explored' && req.method === 'GET') {
     return handleGetExplored(req, res);
+  }
+
+  if (url === '/world/settlers' && req.method === 'GET') {
+    return handleGetSettlers(req, res);
+  }
+
+  if (url === '/world/settler/move' && req.method === 'POST') {
+    return handleMoveSettler(req, res);
   }
 
   if (url.startsWith('/world/tiles') && req.method === 'GET') {
