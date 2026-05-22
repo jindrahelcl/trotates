@@ -237,16 +237,10 @@ function createOwnershipLayer() {
           const key = `${z15x0 + dx},${z15y0 + dy}`;
           const t = state.claimedTiles.get(key);
           if (!t) continue;
-          const hue = resolveHue(t.owner, t.ownerHue);
           const isOwn = state.player && t.owner === state.player.nickname;
-          const { r, g, b } = hueToRgb(hue);
-          ctx.fillStyle = `rgba(${r},${g},${b},${isOwn ? 0.7 : 0.45})`;
+          const { r, g, b } = hueToRgb(isOwn ? 220 : 0);
+          ctx.fillStyle = `rgba(${r},${g},${b},${isOwn ? 0.55 : 0.45})`;
           ctx.fillRect(dx * 64, dy * 64, 64, 64);
-          if (isOwn) {
-            ctx.strokeStyle = `rgba(${r},${g},${b},0.9)`;
-            ctx.lineWidth = 1;
-            ctx.strokeRect(dx * 64 + 0.5, dy * 64 + 0.5, 63, 63);
-          }
         }
       }
 
