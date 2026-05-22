@@ -419,7 +419,7 @@ function startBalanceTick() {
   function tick() {
     const elapsed = (Date.now() - state.balanceAt) / 1000;
     const current = state.balance + state.incomeRate * elapsed;
-    document.getElementById('hud-balance').textContent = current.toFixed(2);
+    document.getElementById('hud-balance').textContent = Math.floor(current);
     document.getElementById('hud-income').textContent  = `+${state.incomeRate.toFixed(4)} / s`;
     document.getElementById('hud-points').textContent  = state.movementPoints;
     document.getElementById('hud-tiles').textContent   = `${state.tileCount} tiles`;
