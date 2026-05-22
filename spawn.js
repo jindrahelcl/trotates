@@ -47,48 +47,60 @@ function findSpawnLocation(allTiles) {
   };
 }
 
-// Returns scattered starter tile positions: picks spawnClusterChunks chunks near
-// center (at least 1 tile each), then scatters remaining tiles across those chunks.
+// Returns starter tile positions arranged as exactly 2 connected components of
+// 2 adjacent chunks each, with the two pairs not adjacent to each other.
 function starterClusterTiles(centerTx, centerTy, existingKeys = new Set()) {
   const used = new Set(existingKeys);
   const r    = WORLD.spawnChunkRadius;
   const ccx  = Math.floor(centerTx / 4) * 4;
   const ccy  = Math.floor(centerTy / 4) * 4;
 
-  const chunkTooClose = (cx, cy) =>
-    chunks.some(c => Math.abs(c.cx - cx) + Math.abs(c.cy - cy) < 8);
+  const DIRS = [{dx:4,dy:0},{dx:-4,dy:0},{dx:0,dy:4},{dx:0,dy:-4}];
+  const adjacent = (ax, ay, bx, by) => Math.abs(ax-bx) + Math.abs(ay-by) === 4;
+  const shuffle  = arr => { for (let i = arr.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
 
-  // Pick distinct chunks within radius with min 2-chunk gap between any pair
-  const chunks     = [{ cx: ccx, cy: ccy }];
-  const usedChunks = new Set([`${ccx},${ccy}`]);
-  for (let attempts = 0; chunks.length < WORLD.spawnClusterChunks && attempts < 500; attempts++) {
-    const cx  = ccx + Math.round((Math.random() * 2 - 1) * r) * 4;
-    const cy  = ccy + Math.round((Math.random() * 2 - 1) * r) * 4;
-    const key = `${cx},${cy}`;
-    if (!usedChunks.has(key) && inBounds(cx, cy) && !chunkTooClose(cx, cy)) {
-      usedChunks.add(key);
-      chunks.push({ cx, cy });
-    }
+  // Component 1: center chunk A + a random adjacent B
+  const aValidDirs = shuffle(DIRS.slice()).filter(d => inBounds(ccx+d.dx, ccy+d.dy));
+  const bDir = aValidDirs[0];
+  const bcx = ccx + bDir.dx, bcy = ccy + bDir.dy;
+  const comp1 = [{cx:ccx,cy:ccy},{cx:bcx,cy:bcy}];
+
+  // Component 2: find C (not adjacent to A or B), then D adjacent to C but not to A or B
+  let comp2 = null;
+  for (let attempt = 0; attempt < 500 && !comp2; attempt++) {
+    const cx = ccx + Math.round((Math.random()*2-1)*r)*4;
+    const cy = ccy + Math.round((Math.random()*2-1)*r)*4;
+    if (!inBounds(cx,cy)) continue;
+    if (comp1.some(c => adjacent(c.cx,c.cy,cx,cy) || (c.cx===cx&&c.cy===cy))) continue;
+
+    const dCandidates = shuffle(DIRS.slice())
+      .map(d => ({cx:cx+d.dx, cy:cy+d.dy}))
+      .filter(d => inBounds(d.cx,d.cy) && !comp1.some(c => adjacent(c.cx,c.cy,d.cx,d.cy)));
+    if (dCandidates.length === 0) continue;
+
+    comp2 = [{cx,cy}, dCandidates[0]];
   }
+
+  const chunks = comp2 ? [...comp1, ...comp2] : comp1;
 
   const placeTileInChunk = (cx, cy) => {
     for (let a = 0; a < 50; a++) {
-      const tx  = cx + Math.floor(Math.random() * 4);
-      const ty  = cy + Math.floor(Math.random() * 4);
+      const tx = cx + Math.floor(Math.random()*4);
+      const ty = cy + Math.floor(Math.random()*4);
       const key = `${tx},${ty}`;
-      if (!used.has(key) && inBounds(tx, ty)) { used.add(key); return { tx, ty }; }
+      if (!used.has(key) && inBounds(tx,ty)) { used.add(key); return {tx,ty}; }
     }
     return null;
   };
 
   const tiles = [];
-  for (const { cx, cy } of chunks) {
-    const t = placeTileInChunk(cx, cy);
+  for (const {cx,cy} of chunks) {
+    const t = placeTileInChunk(cx,cy);
     if (t) tiles.push(t);
   }
   for (let a = 0; tiles.length < WORLD.spawnClusterSize && a < 200; a++) {
-    const { cx, cy } = chunks[Math.floor(Math.random() * chunks.length)];
-    const t = placeTileInChunk(cx, cy);
+    const {cx,cy} = chunks[Math.floor(Math.random()*chunks.length)];
+    const t = placeTileInChunk(cx,cy);
     if (t) tiles.push(t);
   }
 
