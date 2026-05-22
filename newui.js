@@ -542,8 +542,181 @@ function hideActionPanel() {
 
 let puzzle = null;
 let _puzzleTimerRaf = null;
-let _dragSrcIdx = null;
-let _didDrag = false;
+
+// Custom ghost for drag (created once, lives forever)
+const _ghost = (() => {
+  const g = document.createElement('div');
+  g.className = 'drag-ghost';
+  const gi = document.createElement('img');
+  gi.draggable = false;
+  g.appendChild(gi);
+  document.body.appendChild(g);
+  return { el: g, img: gi };
+})();
+let _ghostSize = 80;
+
+function _showGhost(idx, x, y) {
+  const grid = document.getElementById('puzzle-grid');
+  const cell = grid.querySelector('.puzzle-tile');
+  _ghostSize = cell ? cell.offsetWidth : 80;
+  _ghost.el.style.width = _ghost.el.style.height = _ghostSize + 'px';
+  _ghost.img.src = `/tiles/outdoor/15/${puzzle.tiles[idx].x}/${puzzle.tiles[idx].y}`;
+  _ghost.img.style.transform = `rotate(${puzzle.tiles[idx].rotation}deg)`;
+  _ghost.el.style.display = 'block';
+  _positionGhost(x, y);
+}
+function _positionGhost(x, y) {
+  _ghost.el.style.left = (x - _ghostSize / 2) + 'px';
+  _ghost.el.style.top  = (y - _ghostSize / 2) + 'px';
+}
+function _hideGhost() { _ghost.el.style.display = 'none'; }
+
+// Drag state
+const DRAG_THRESHOLD = 5;
+let _dragSrcIdx = null, _isDragging = false, _suppressClick = false;
+let _dragStartX = 0, _dragStartY = 0;
+let _touchDragSrc = null;
+
+function _cancelDrag() {
+  document.querySelectorAll('.puzzle-tile').forEach(c => c.classList.remove('dragging', 'drag-over'));
+  _hideGhost();
+  _dragSrcIdx = null; _isDragging = false; _touchDragSrc = null;
+}
+
+function _updateTileDom(idx) {
+  const cell = document.querySelectorAll('.puzzle-tile')[idx];
+  if (!cell) return;
+  const img = cell.querySelector('img');
+  const tile = puzzle.tiles[idx];
+  img.style.transition = 'none';
+  img.src = `/tiles/outdoor/15/${tile.x}/${tile.y}`;
+  img.style.transform = `rotate(${tile.rotation}deg)`;
+  void img.offsetWidth; // force reflow — commit before re-enabling transition
+  img.style.transition = '';
+}
+
+function _swapTiles(a, b) {
+  const { x: ax, y: ay, rotation: ar } = puzzle.tiles[a];
+  puzzle.tiles[a].x = puzzle.tiles[b].x;
+  puzzle.tiles[a].y = puzzle.tiles[b].y;
+  puzzle.tiles[a].rotation = puzzle.tiles[b].rotation;
+  puzzle.tiles[b].x = ax; puzzle.tiles[b].y = ay; puzzle.tiles[b].rotation = ar;
+  _updateTileDom(a);
+  _updateTileDom(b);
+  setTimeout(checkPuzzleWin, 50);
+}
+
+function _rotateTile(idx) {
+  if (!puzzle || puzzle.solved) return;
+  puzzle.tiles[idx].rotation = (puzzle.tiles[idx].rotation + 90) % 360;
+  const img = document.querySelectorAll('.puzzle-tile')[idx]?.querySelector('img');
+  if (img) img.style.transform = `rotate(${puzzle.tiles[idx].rotation}deg)`;
+  setTimeout(checkPuzzleWin, 220);
+}
+
+// Mouse handlers — on document, guarded by puzzle state
+document.addEventListener('mousedown', e => {
+  if (e.button !== 0 || !puzzle || puzzle.solved) return;
+  const cell = e.target.closest('.puzzle-tile');
+  if (!cell) return;
+  e.preventDefault();
+  _dragSrcIdx = parseInt(cell.dataset.idx);
+  _dragStartX = e.clientX; _dragStartY = e.clientY;
+  _isDragging = false;
+});
+document.addEventListener('mousemove', e => {
+  if (_dragSrcIdx === null) return;
+  if (e.buttons === 0) { _cancelDrag(); return; }
+  const dx = e.clientX - _dragStartX, dy = e.clientY - _dragStartY;
+  if (!_isDragging && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+    _isDragging = true;
+    document.querySelectorAll('.puzzle-tile')[_dragSrcIdx]?.classList.add('dragging');
+    _showGhost(_dragSrcIdx, e.clientX, e.clientY);
+  }
+  if (_isDragging) {
+    _positionGhost(e.clientX, e.clientY);
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const cell = el && el.closest('.puzzle-tile');
+    document.querySelectorAll('.puzzle-tile.drag-over').forEach(c => c.classList.remove('drag-over'));
+    if (cell && parseInt(cell.dataset.idx) !== _dragSrcIdx) cell.classList.add('drag-over');
+  }
+});
+document.addEventListener('mouseup', e => {
+  if (_dragSrcIdx === null) return;
+  if (_isDragging) {
+    _suppressClick = true;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const cell = el && el.closest('.puzzle-tile');
+    if (cell) {
+      const dropIdx = parseInt(cell.dataset.idx);
+      if (dropIdx !== _dragSrcIdx) _swapTiles(_dragSrcIdx, dropIdx);
+    }
+    document.querySelectorAll('.puzzle-tile').forEach(c => c.classList.remove('dragging', 'drag-over'));
+    _hideGhost();
+  }
+  _dragSrcIdx = null; _isDragging = false;
+});
+window.addEventListener('blur', _cancelDrag);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && puzzle) { _cancelDrag(); hidePuzzle(); } });
+
+// Grid-level: click to rotate, touch drag
+const _puzzleGrid = document.getElementById('puzzle-grid');
+_puzzleGrid.addEventListener('click', e => {
+  if (_suppressClick) { _suppressClick = false; return; }
+  if (!puzzle || puzzle.solved) return;
+  const cell = e.target.closest('.puzzle-tile');
+  if (cell) _rotateTile(parseInt(cell.dataset.idx));
+});
+_puzzleGrid.addEventListener('touchstart', e => {
+  if (!puzzle || puzzle.solved) return;
+  const touch = e.changedTouches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const cell = el && el.closest('.puzzle-tile');
+  if (!cell) return;
+  _touchDragSrc = { idx: parseInt(cell.dataset.idx), id: touch.identifier };
+  _dragStartX = touch.clientX; _dragStartY = touch.clientY;
+  _isDragging = false;
+}, { passive: true });
+_puzzleGrid.addEventListener('touchmove', e => {
+  if (!_touchDragSrc) return;
+  for (const touch of e.changedTouches) {
+    if (touch.identifier !== _touchDragSrc.id) continue;
+    e.preventDefault();
+    const dx = touch.clientX - _dragStartX, dy = touch.clientY - _dragStartY;
+    if (!_isDragging && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+      _isDragging = true;
+      document.querySelectorAll('.puzzle-tile')[_touchDragSrc.idx]?.classList.add('dragging');
+      _showGhost(_touchDragSrc.idx, touch.clientX, touch.clientY);
+    }
+    if (_isDragging) {
+      _positionGhost(touch.clientX, touch.clientY);
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const cell = el && el.closest('.puzzle-tile');
+      document.querySelectorAll('.puzzle-tile.drag-over').forEach(c => c.classList.remove('drag-over'));
+      if (cell && parseInt(cell.dataset.idx) !== _touchDragSrc.idx) cell.classList.add('drag-over');
+    }
+  }
+}, { passive: false });
+_puzzleGrid.addEventListener('touchend', e => {
+  if (!_touchDragSrc) return;
+  for (const touch of e.changedTouches) {
+    if (touch.identifier !== _touchDragSrc.id) continue;
+    if (_isDragging) {
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const cell = el && el.closest('.puzzle-tile');
+      if (cell) {
+        const dropIdx = parseInt(cell.dataset.idx);
+        if (dropIdx !== _touchDragSrc.idx) _swapTiles(_touchDragSrc.idx, dropIdx);
+      }
+      document.querySelectorAll('.puzzle-tile').forEach(c => c.classList.remove('dragging', 'drag-over'));
+      _hideGhost();
+    } else {
+      _rotateTile(_touchDragSrc.idx);
+    }
+    _touchDragSrc = null; _isDragging = false;
+  }
+});
+_puzzleGrid.addEventListener('touchcancel', _cancelDrag);
 
 function showPuzzle(chunkTx, chunkTy, mode, settlerId = null) {
   const overlay = document.getElementById('puzzle-overlay');
@@ -579,41 +752,13 @@ function renderPuzzle() {
   puzzle.tiles.forEach((tile, idx) => {
     const cell = document.createElement('div');
     cell.className = 'puzzle-tile';
+    cell.dataset.idx = idx;
 
     const img = document.createElement('img');
     img.src = `/tiles/outdoor/15/${tile.x}/${tile.y}`;
     img.style.transform = `rotate(${tile.rotation}deg)`;
     img.draggable = false;
     cell.appendChild(img);
-
-    // Click: rotate
-    cell.addEventListener('click', () => {
-      if (_didDrag || !puzzle || puzzle.solved) return;
-      puzzle.tiles[idx].rotation = (puzzle.tiles[idx].rotation + 90) % 360;
-      img.style.transform = `rotate(${puzzle.tiles[idx].rotation}deg)`;
-      setTimeout(checkPuzzleWin, 220);
-    });
-
-    // Drag: swap positions
-    cell.draggable = true;
-    cell.addEventListener('dragstart', e => {
-      _dragSrcIdx = idx; _didDrag = false;
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    cell.addEventListener('dragover', e => { e.preventDefault(); _didDrag = true; cell.classList.add('drag-over'); });
-    cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
-    cell.addEventListener('drop', e => {
-      e.preventDefault();
-      cell.classList.remove('drag-over');
-      if (_dragSrcIdx !== null && _dragSrcIdx !== idx) {
-        [puzzle.tiles[_dragSrcIdx], puzzle.tiles[idx]] = [puzzle.tiles[idx], puzzle.tiles[_dragSrcIdx]];
-        renderPuzzle();
-        setTimeout(checkPuzzleWin, 220);
-      }
-      _dragSrcIdx = null;
-    });
-    cell.addEventListener('dragend', () => { _dragSrcIdx = null; });
-
     grid.appendChild(cell);
   });
 }

@@ -339,16 +339,41 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
   cursor: pointer;
   background: #0a0a12;
   user-select: none;
+  border-radius: 3px;
+  position: relative;
+  transition: box-shadow 0.15s;
+  touch-action: manipulation;
 }
+.puzzle-tile:hover { box-shadow: 0 0 0 3px var(--accent); z-index: 1; }
+.puzzle-tile.dragging  { opacity: 0.25; }
+.puzzle-tile.drag-over { box-shadow: 0 0 0 3px var(--accent2); z-index: 2; }
+
 .puzzle-tile img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.2s ease;
+  transition: transform 0.25s ease;
+  user-select: none;
   pointer-events: none;
 }
-.puzzle-tile.drag-over { outline: 2px solid var(--accent2); outline-offset: -2px; }
+
+.drag-ghost {
+  display: none;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.7);
+  will-change: left, top;
+}
+.drag-ghost img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+}
 @keyframes puzzle-win-spin {
   from { transform: rotate(var(--rot)); }
   to   { transform: rotate(calc(var(--rot) + 360deg)); }
