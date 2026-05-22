@@ -441,6 +441,9 @@ function showActionPanel(chunkTx, chunkTy) {
 
   const { tx: tx13, ty: ty13 } = z15toZ13(chunkTx, chunkTy);
   const isExplored = state.exploredZ13.has(`${tx13},${ty13}`);
+  const isAdjacentToExplored = !isExplored && [
+    [tx13-1,ty13],[tx13+1,ty13],[tx13,ty13-1],[tx13,ty13+1],
+  ].some(([x,y]) => state.exploredZ13.has(`${x},${y}`));
 
   // Find tiles in this chunk
   const chunkOwners = new Set();
@@ -467,7 +470,11 @@ function showActionPanel(chunkTx, chunkTy) {
   `;
 
   if (!isExplored) {
-    html += `<div class="action-fog">Unexplored — solve puzzles nearby to reveal this area.</div>`;
+    if (isAdjacentToExplored) {
+      html += `<button class="action-btn primary" id="btn-explore">Explore this chunk</button>`;
+    } else {
+      html += `<div class="action-fog">Unexplored — explore adjacent chunks first.</div>`;
+    }
   } else {
     if (chunkOwners.size === 0) {
       html += `<div class="action-info">Unclaimed territory</div>`;
@@ -517,6 +524,7 @@ function showActionPanel(chunkTx, chunkTy) {
 
   content.innerHTML = html;
 
+  document.getElementById('btn-explore')?.addEventListener('click', () => doExplore(chunkTx, chunkTy));
   document.getElementById('btn-settle')?.addEventListener('click', () => doSettle(settlerInChunk));
   document.getElementById('btn-complete-settle')?.addEventListener('click', () => doCompleteSettle(settlerInChunk));
   document.getElementById('btn-move')?.addEventListener('click', () => {
@@ -534,6 +542,25 @@ function hideActionPanel() {
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────
+
+async function doExplore(chunkTx, chunkTy) {
+  const ms = parseInt(prompt('Solve time in ms (temp — puzzle integration pending):'), 10);
+  if (isNaN(ms)) return;
+  const tx = chunkTx + Math.floor(Math.random() * 4);
+  const ty = chunkTy + Math.floor(Math.random() * 4);
+  try {
+    const res = await fetchJSON('/world/explore', {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tx, ty, solveTimeMs: ms }),
+    });
+    const { tx: tx13, ty: ty13 } = z15toZ13(tx, ty);
+    state.exploredZ13.add(`${tx13},${ty13}`);
+    state.movementPoints = res.totalPoints;
+    fogLayer.redraw();
+    showActionPanel(chunkTx, chunkTy);
+  } catch { showMsg('Explore failed.'); }
+}
 
 async function doMoveSettler(settler, chunkTx, chunkTy) {
   showMsg('Moving settler…');
