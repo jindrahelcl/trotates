@@ -588,9 +588,6 @@ function handleCompleteSettle(req, res) {
       const settler = db.getSettler(settlerId);
       if (!settler || settler.player_id !== player.id)
         return jsonOk(res, { ok: false, error: 'not_found' });
-      if (settler.status !== 'settling')
-        return jsonOk(res, { ok: false, error: 'not_settling' });
-
       const { tx, ty } = settler;
       const zoom = WORLD.zoom;
 

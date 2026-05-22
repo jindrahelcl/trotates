@@ -46,9 +46,17 @@
       </div>
     </aside>
 
-    <!-- Center: map -->
+    <!-- Center: map + puzzle overlay -->
     <div class="map-wrap">
       <div id="map"></div>
+      <div id="puzzle-overlay">
+        <div id="puzzle-header">
+          <span id="puzzle-label"></span>
+          <span id="puzzle-timer">0:00</span>
+          <button id="puzzle-close-btn">✕</button>
+        </div>
+        <div id="puzzle-grid"></div>
+      </div>
     </div>
 
     <!-- Right: action panel (hidden until tile click) -->

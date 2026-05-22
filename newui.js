@@ -495,12 +495,10 @@ function showActionPanel(chunkTx, chunkTy) {
 
     // Settler actions
     if (settlerInChunk) {
-      html += `<div class="action-info">Your settler is here (status: ${settlerInChunk.status})</div>`;
-      if (settlerInChunk.status === 'idle' && chunkOwners.size === 0) {
+      if (chunkOwners.size === 0) {
         html += `<button class="action-btn primary" id="btn-settle">Settle this chunk</button>`;
-      } else if (settlerInChunk.status === 'settling') {
-        html += `<button class="action-btn primary" id="btn-complete-settle">Complete settle (puzzle done)</button>`;
-        html += `<div class="action-info">Solve the nightmare puzzle, then click above to claim the tiles.</div>`;
+      } else {
+        html += `<div class="action-info">Your settler is here — chunk already claimed.</div>`;
       }
     } else {
       const activeSettler = state.selectedSettler != null
@@ -526,7 +524,6 @@ function showActionPanel(chunkTx, chunkTy) {
 
   document.getElementById('btn-explore')?.addEventListener('click', () => doExplore(chunkTx, chunkTy));
   document.getElementById('btn-settle')?.addEventListener('click', () => doSettle(settlerInChunk));
-  document.getElementById('btn-complete-settle')?.addEventListener('click', () => doCompleteSettle(settlerInChunk));
   document.getElementById('btn-move')?.addEventListener('click', () => {
     const s = state.selectedSettler != null
       ? state.settlers.find(s => s.id === state.selectedSettler)
@@ -541,25 +538,164 @@ function hideActionPanel() {
   document.getElementById('action-content').innerHTML = '';
 }
 
+// ── Puzzle ─────────────────────────────────────────────────────────────────
+
+let puzzle = null;
+let _puzzleTimerRaf = null;
+let _dragSrcIdx = null;
+let _didDrag = false;
+
+function showPuzzle(chunkTx, chunkTy, mode, settlerId = null) {
+  const overlay = document.getElementById('puzzle-overlay');
+
+  // Set zoom-from origin to the chunk's center on screen
+  const origin = map.latLngToContainerPoint(tilePureLatLng(chunkTx + 2, chunkTy + 2, 15));
+  overlay.style.transformOrigin = `${origin.x}px ${origin.y}px`;
+
+  // Build the correct tile layout (row-major)
+  const baseTiles = [];
+  for (let dy = 0; dy < 4; dy++)
+    for (let dx = 0; dx < 4; dx++)
+      baseTiles.push({ x: chunkTx + dx, y: chunkTy + dy });
+
+  // Scramble: shuffle positions, randomise rotations (90/180/270)
+  const tiles = baseTiles.map(t => ({ ...t, rotation: (1 + Math.floor(Math.random() * 3)) * 90 }));
+  for (let i = tiles.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+  }
+
+  puzzle = { tiles, baseTiles, startTime: Date.now(), mode, chunkTx, chunkTy, settlerId, solved: false };
+  document.getElementById('puzzle-label').textContent = mode === 'explore' ? 'Explore' : 'Settle';
+  renderPuzzle();
+
+  overlay.classList.add('visible');
+  startPuzzleTimer();
+}
+
+function renderPuzzle() {
+  const grid = document.getElementById('puzzle-grid');
+  grid.innerHTML = '';
+  puzzle.tiles.forEach((tile, idx) => {
+    const cell = document.createElement('div');
+    cell.className = 'puzzle-tile';
+
+    const img = document.createElement('img');
+    img.src = `/tiles/outdoor/15/${tile.x}/${tile.y}`;
+    img.style.transform = `rotate(${tile.rotation}deg)`;
+    img.draggable = false;
+    cell.appendChild(img);
+
+    // Click: rotate
+    cell.addEventListener('click', () => {
+      if (_didDrag || !puzzle || puzzle.solved) return;
+      puzzle.tiles[idx].rotation = (puzzle.tiles[idx].rotation + 90) % 360;
+      img.style.transform = `rotate(${puzzle.tiles[idx].rotation}deg)`;
+      setTimeout(checkPuzzleWin, 220);
+    });
+
+    // Drag: swap positions
+    cell.draggable = true;
+    cell.addEventListener('dragstart', e => {
+      _dragSrcIdx = idx; _didDrag = false;
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    cell.addEventListener('dragover', e => { e.preventDefault(); _didDrag = true; cell.classList.add('drag-over'); });
+    cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+    cell.addEventListener('drop', e => {
+      e.preventDefault();
+      cell.classList.remove('drag-over');
+      if (_dragSrcIdx !== null && _dragSrcIdx !== idx) {
+        [puzzle.tiles[_dragSrcIdx], puzzle.tiles[idx]] = [puzzle.tiles[idx], puzzle.tiles[_dragSrcIdx]];
+        renderPuzzle();
+        setTimeout(checkPuzzleWin, 220);
+      }
+      _dragSrcIdx = null;
+    });
+    cell.addEventListener('dragend', () => { _dragSrcIdx = null; });
+
+    grid.appendChild(cell);
+  });
+}
+
+function startPuzzleTimer() {
+  if (_puzzleTimerRaf) cancelAnimationFrame(_puzzleTimerRaf);
+  const el = document.getElementById('puzzle-timer');
+  function tick() {
+    if (!puzzle || puzzle.solved) return;
+    const s = Math.floor((Date.now() - puzzle.startTime) / 1000);
+    el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    _puzzleTimerRaf = requestAnimationFrame(tick);
+  }
+  _puzzleTimerRaf = requestAnimationFrame(tick);
+}
+
+function checkPuzzleWin() {
+  if (!puzzle || puzzle.solved) return;
+  const won = puzzle.tiles.every((t, i) =>
+    t.x === puzzle.baseTiles[i].x && t.y === puzzle.baseTiles[i].y && t.rotation % 360 === 0
+  );
+  if (!won) return;
+  puzzle.solved = true;
+  // Win animation: spin each tile once
+  document.querySelectorAll('.puzzle-tile img').forEach(img => {
+    img.style.setProperty('--rot', img.style.transform.match(/rotate\(([^)]+)\)/)?.[1] || '0deg');
+    img.parentElement.classList.add('winning');
+  });
+  setTimeout(() => onPuzzleWin(Date.now() - puzzle.startTime), 900);
+}
+
+async function onPuzzleWin(solveTimeMs) {
+  const { mode, chunkTx, chunkTy, settlerId } = puzzle;
+  try {
+    if (mode === 'explore') {
+      const tx = chunkTx + Math.floor(Math.random() * 4);
+      const ty = chunkTy + Math.floor(Math.random() * 4);
+      const res = await fetchJSON('/world/explore', {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tx, ty, solveTimeMs }),
+      });
+      const { tx: tx13, ty: ty13 } = z15toZ13(tx, ty);
+      state.exploredZ13.add(`${tx13},${ty13}`);
+      state.movementPoints = res.totalPoints;
+    } else {
+      const res = await fetchJSON('/world/settler/complete', {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settlerId, solveTimeMs }),
+      });
+      if (res.ok) {
+        for (const t of res.claimed) {
+          const k13 = z15toZ13(t.tx, t.ty);
+          state.exploredZ13.add(`${k13.tx},${k13.ty}`);
+          state.claimedTiles.set(`${t.tx},${t.ty}`, { owner: state.player.nickname, ownerHue: null });
+        }
+        await Promise.all([refreshSettlers(), refreshBalance()]);
+        if (ownershipLayer) ownershipLayer.redraw();
+      }
+    }
+  } catch (e) { console.error('Puzzle win failed:', e); }
+
+  hidePuzzle();
+  fogLayer.redraw();
+}
+
+function hidePuzzle() {
+  const overlay = document.getElementById('puzzle-overlay');
+  overlay.classList.remove('visible');
+  setTimeout(() => {
+    if (_puzzleTimerRaf) { cancelAnimationFrame(_puzzleTimerRaf); _puzzleTimerRaf = null; }
+    document.getElementById('puzzle-grid').innerHTML = '';
+    puzzle = null;
+  }, 380);
+}
+
 // ── Actions ────────────────────────────────────────────────────────────────
 
-async function doExplore(chunkTx, chunkTy) {
-  const ms = parseInt(prompt('Solve time in ms (temp — puzzle integration pending):'), 10);
-  if (isNaN(ms)) return;
-  const tx = chunkTx + Math.floor(Math.random() * 4);
-  const ty = chunkTy + Math.floor(Math.random() * 4);
-  try {
-    const res = await fetchJSON('/world/explore', {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tx, ty, solveTimeMs: ms }),
-    });
-    const { tx: tx13, ty: ty13 } = z15toZ13(tx, ty);
-    state.exploredZ13.add(`${tx13},${ty13}`);
-    state.movementPoints = res.totalPoints;
-    fogLayer.redraw();
-    showActionPanel(chunkTx, chunkTy);
-  } catch { showMsg('Explore failed.'); }
+function doExplore(chunkTx, chunkTy) {
+  hideActionPanel();
+  showPuzzle(chunkTx, chunkTy, 'explore');
 }
 
 async function doMoveSettler(settler, chunkTx, chunkTy) {
@@ -589,49 +725,11 @@ async function doMoveSettler(settler, chunkTx, chunkTy) {
   }
 }
 
-async function doSettle(settler) {
-  showMsg('Initiating settle…');
-  try {
-    const res = await fetchJSON('/world/settler/settle', {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settlerId: settler.id }),
-    });
-    if (!res.ok) { showMsg(`Settle failed: ${res.error}`); return; }
-    await refreshSettlers();
-    showMsg(`Puzzle started! Chunk at (${res.chunkTx}, ${res.chunkTy}). Solve the puzzle then click "Complete settle".`);
-    showActionPanel(selectedChunk.tx, selectedChunk.ty);
-  } catch {
-    showMsg('Settle failed.');
-  }
-}
-
-async function doCompleteSettle(settler) {
-  // In real flow the client would have the solve time from the puzzle.
-  // For now prompt for it (placeholder until puzzle integration).
-  const ms = parseInt(prompt('Enter solve time in milliseconds (temp):'), 10);
-  if (isNaN(ms)) return;
-  try {
-    const res = await fetchJSON('/world/settler/complete', {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settlerId: settler.id, solveTimeMs: ms }),
-    });
-    if (!res.ok) { showMsg(`Complete failed: ${res.error}`); return; }
-    showMsg(`Claimed ${res.claimed.length} tiles!`);
-    // Update explored + claimed
-    for (const t of res.claimed) {
-      const k13 = z15toZ13(t.tx, t.ty);
-      state.exploredZ13.add(`${k13.tx},${k13.ty}`);
-      state.claimedTiles.set(`${t.tx},${t.ty}`, { owner: state.player.nickname, ownerHue: null });
-    }
-    await Promise.all([refreshSettlers(), refreshBalance()]);
-    fogLayer.redraw();
-    if (ownershipLayer) ownershipLayer.redraw();
-    hideActionPanel();
-  } catch {
-    showMsg('Complete failed.');
-  }
+function doSettle(settler) {
+  const chunkTx = Math.floor(settler.tx / 4) * 4;
+  const chunkTy = Math.floor(settler.ty / 4) * 4;
+  hideActionPanel();
+  showPuzzle(chunkTx, chunkTy, 'settle', settler.id);
 }
 
 function showMsg(text) {
@@ -657,6 +755,7 @@ function onMapClick(e) {
 // ── Boot ───────────────────────────────────────────────────────────────────
 
 document.getElementById('action-close').addEventListener('click', hideActionPanel);
+document.getElementById('puzzle-close-btn').addEventListener('click', hidePuzzle);
 
 (async () => {
   try {
