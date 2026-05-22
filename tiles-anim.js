@@ -23,21 +23,37 @@ const CENTER = { x: 17692, y: 11099 };
     }
   }
 
-  const cells = Array.from(grid.children);
-  const nextAt = cells.map((_, i) => performance.now() + i * 250 + Math.random() * 800);
+  const cells  = Array.from(grid.children);
+  const timers = new Set();
 
-  function tick(now) {
-    cells.forEach((cell, i) => {
-      if (now < nextAt[i]) return;
-      const deg  = (Math.floor(Math.random() * 3) + 1) * 90;
-      const cur  = parseInt(cell.dataset.rot || '0');
-      const next = cur + deg;
-      cell.dataset.rot = next;
-      cell.style.transform = `rotateZ(${next}deg)`;
-      nextAt[i] = now + 2500 + Math.random() * 4000;
-    });
-    requestAnimationFrame(tick);
+  function later(fn, delay) {
+    const id = setTimeout(() => { timers.delete(id); fn(); }, delay);
+    timers.add(id);
   }
 
-  requestAnimationFrame(tick);
+  function spinCell(cell) {
+    if (document.hidden) return;
+    const deg  = (Math.floor(Math.random() * 3) + 1) * 90;
+    const cur  = parseInt(cell.dataset.rot || '0');
+    const next = cur + deg;
+    cell.dataset.rot = next;
+    cell.style.transform = `rotateZ(${next}deg)`;
+    later(() => spinCell(cell), 2500 + Math.random() * 4000);
+  }
+
+  function startAll() {
+    cells.forEach((cell, i) =>
+      later(() => spinCell(cell), i * 250 + Math.random() * 800)
+    );
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      timers.forEach(id => clearTimeout(id));
+      timers.clear();
+      startAll();
+    }
+  });
+
+  startAll();
 }());
