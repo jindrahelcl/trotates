@@ -541,6 +541,109 @@ function handleGetSettlers(req, res) {
   jsonOk(res, db.getSettlersByPlayer(player.id));
 }
 
+function handleStartSettle(req, res) {
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { settlerId } = JSON.parse(body);
+      if (typeof settlerId !== 'number') throw new Error();
+
+      const settler = db.getSettler(settlerId);
+      if (!settler || settler.player_id !== player.id)
+        return jsonOk(res, { ok: false, error: 'not_found' });
+      if (settler.status === 'settling')
+        return jsonOk(res, { ok: false, error: 'already_settling' });
+
+      const { tx, ty } = settler;
+      const existing = db.getTile(tx, ty, WORLD.zoom);
+      if (existing)
+        return jsonOk(res, { ok: false, error: 'already_claimed' });
+
+      db.setSettlerStatus(settlerId, 'settling');
+
+      // Chunk origin: align to puzzleW × puzzleH grid
+      const chunkTx = Math.floor(tx / WORLD.puzzleW) * WORLD.puzzleW;
+      const chunkTy = Math.floor(ty / WORLD.puzzleH) * WORLD.puzzleH;
+
+      jsonOk(res, { ok: true, tx, ty, chunkTx, chunkTy, puzzleW: WORLD.puzzleW, puzzleH: WORLD.puzzleH });
+    } catch {
+      res.writeHead(400); res.end('Bad request');
+    }
+  });
+}
+
+function handleCompleteSettle(req, res) {
+  const player = auth.requireAuth(req, res);
+  if (!player) return;
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { settlerId, solveTimeMs } = JSON.parse(body);
+      if (typeof settlerId !== 'number' || typeof solveTimeMs !== 'number') throw new Error();
+
+      const settler = db.getSettler(settlerId);
+      if (!settler || settler.player_id !== player.id)
+        return jsonOk(res, { ok: false, error: 'not_found' });
+      if (settler.status !== 'settling')
+        return jsonOk(res, { ok: false, error: 'not_settling' });
+
+      const { tx, ty } = settler;
+      const zoom = WORLD.zoom;
+
+      // Double-check tile is still unclaimed
+      if (db.getTile(tx, ty, zoom))
+        return jsonOk(res, { ok: false, error: 'already_claimed' });
+
+      const timeMs = Math.max(0, Math.round(solveTimeMs));
+      db.logSolve(player.id, tx, ty, zoom, timeMs);
+      db.exploreTile(player.id, tx, ty, zoom);
+
+      const bonusCount = percentile.scorePoints(timeMs); // 1–3 bonus tiles
+      const chunkTx = Math.floor(tx / WORLD.puzzleW) * WORLD.puzzleW;
+      const chunkTy = Math.floor(ty / WORLD.puzzleH) * WORLD.puzzleH;
+
+      // Collect unclaimed tiles in the chunk (excluding the settler tile)
+      const chunkTiles = db.getTilesInChunk(chunkTx, chunkTy, zoom, WORLD.puzzleW, WORLD.puzzleH);
+      const claimedInChunk = new Set(chunkTiles.map(t => `${t.tx},${t.ty}`));
+      const candidates = [];
+      for (let cx = chunkTx; cx < chunkTx + WORLD.puzzleW; cx++) {
+        for (let cy = chunkTy; cy < chunkTy + WORLD.puzzleH; cy++) {
+          if (cx === tx && cy === ty) continue;
+          if (!claimedInChunk.has(`${cx},${cy}`)) candidates.push({ tx: cx, ty: cy });
+        }
+      }
+
+      // Shuffle and pick up to bonusCount bonus tiles
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      }
+      const bonusTiles = candidates.slice(0, bonusCount - 1); // -1 because settler tile counts as 1
+
+      const claimed = [{ tx, ty }];
+      const bonus = Math.random() < WORLD.bonusChance ? 1 : null;
+      db.claimTile(tx, ty, zoom, player.id, bonus);
+      db.exploreTile(player.id, tx, ty, zoom);
+
+      for (const t of bonusTiles) {
+        db.claimTile(t.tx, t.ty, zoom, player.id, Math.random() < WORLD.bonusChance ? 1 : null);
+        db.exploreTile(player.id, t.tx, t.ty, zoom);
+        claimed.push(t);
+      }
+
+      db.setSettlerStatus(settlerId, 'idle');
+
+      jsonOk(res, { ok: true, claimed, solveTimeMs: timeMs, pointsEarned: bonusCount });
+    } catch {
+      res.writeHead(400); res.end('Bad request');
+    }
+  });
+}
+
 function handleMoveSettler(req, res) {
   const player = auth.requireAuth(req, res);
   if (!player) return;
@@ -745,6 +848,14 @@ const server = http.createServer((req, res) => {
 
   if (url === '/world/settler/move' && req.method === 'POST') {
     return handleMoveSettler(req, res);
+  }
+
+  if (url === '/world/settler/settle' && req.method === 'POST') {
+    return handleStartSettle(req, res);
+  }
+
+  if (url === '/world/settler/complete' && req.method === 'POST') {
+    return handleCompleteSettle(req, res);
   }
 
   if (url.startsWith('/world/tiles') && req.method === 'GET') {

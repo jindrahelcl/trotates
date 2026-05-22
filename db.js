@@ -132,6 +132,8 @@ const stmts = {
   getSettlersByPlayer:    db.prepare('SELECT * FROM settlers WHERE player_id = ?'),
   getSettler:             db.prepare('SELECT * FROM settlers WHERE id = ?'),
   moveSettler:            db.prepare('UPDATE settlers SET tx = ?, ty = ?, status = ? WHERE id = ?'),
+  setSettlerStatus:       db.prepare('UPDATE settlers SET status = ? WHERE id = ?'),
+  getTilesInChunk:        db.prepare('SELECT tx, ty FROM tiles WHERE zoom = ? AND tx >= ? AND tx < ? AND ty >= ? AND ty < ?'),
 };
 
 function findById(id)           { return stmts.byId.get(id) || null; }
@@ -195,6 +197,8 @@ function createSettler(playerId, tx, ty)       { return stmts.createSettler.run(
 function getSettlersByPlayer(playerId)         { return stmts.getSettlersByPlayer.all(playerId); }
 function getSettler(id)                        { return stmts.getSettler.get(id) || null; }
 function moveSettler(id, tx, ty, status)       { stmts.moveSettler.run(tx, ty, status, id); }
+function setSettlerStatus(id, status)          { stmts.setSettlerStatus.run(status, id); }
+function getTilesInChunk(tx, ty, zoom, pw, ph) { return stmts.getTilesInChunk.all(zoom, tx, tx + pw, ty, ty + ph); }
 
 // ── Migration from players.json ───────────────────────────────────────────────
 
@@ -257,4 +261,6 @@ module.exports = {
   getSettlersByPlayer,
   getSettler,
   moveSettler,
+  setSettlerStatus,
+  getTilesInChunk,
 };
