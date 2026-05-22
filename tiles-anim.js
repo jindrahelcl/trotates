@@ -32,28 +32,17 @@ const CENTER = { x: 17692, y: 11099 };
   }
 
   function spinCell(cell) {
-    if (document.hidden) return;
-    const deg  = (Math.floor(Math.random() * 3) + 1) * 90;
-    const cur  = parseInt(cell.dataset.rot || '0');
-    const next = cur + deg;
-    cell.dataset.rot = next;
-    cell.style.transform = `rotateZ(${next}deg)`;
+    if (!document.hidden) {
+      const deg  = (Math.floor(Math.random() * 3) + 1) * 90;
+      const cur  = parseInt(cell.dataset.rot || '0');
+      const next = cur + deg;
+      cell.dataset.rot = next;
+      cell.style.transform = `rotateZ(${next}deg)`;
+    }
     later(() => spinCell(cell), 2500 + Math.random() * 4000);
   }
 
-  function startAll() {
-    cells.forEach((cell, i) =>
-      later(() => spinCell(cell), i * 250 + Math.random() * 800)
-    );
-  }
-
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      timers.forEach(id => clearTimeout(id));
-      timers.clear();
-      startAll();
-    }
-  });
-
-  startAll();
+  cells.forEach((cell, i) =>
+    later(() => spinCell(cell), i * 250 + Math.random() * 800)
+  );
 }());
