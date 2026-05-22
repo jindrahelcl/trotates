@@ -1,0 +1,285 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent:   #e94560;
+  --accent2:  #4ecca3;
+  --bg:       #1a1a2e;
+  --panel:    #16213e;
+  --border:   #0f3460;
+  --text:     #eee;
+  --muted:    #667;
+  --stats-w:  210px;
+  --action-w: 260px;
+}
+
+html, body { height: 100%; overflow: hidden; }
+body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+/* ── Layout ───────────────────────────────────────────────────── */
+
+.game-layout {
+  display: flex;
+  height: 100vh;
+}
+
+/* ── Stats panel ──────────────────────────────────────────────── */
+
+.stats-panel {
+  width: var(--stats-w);
+  flex-shrink: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.brand {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+.brand span { color: var(--accent); }
+
+.nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 10px;
+}
+.nav-links a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 5px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.82rem;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-links a:hover  { color: var(--text); background: var(--border); }
+.nav-links a.nav-active { color: var(--accent2); background: var(--border); }
+
+.hud-section {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.hud-player {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent2);
+}
+
+.hud-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.hud-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-balance { color: var(--accent2); }
+
+.hud-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+/* ── Settler list ─────────────────────────────────────────────── */
+
+.settler-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.settler-item {
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 0.78rem;
+  color: #aaa;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.settler-item:hover { border-color: var(--accent2); color: var(--text); }
+.settler-item.selected { border-color: var(--accent2); color: var(--accent2); }
+.settler-item .settler-status {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ── Map ──────────────────────────────────────────────────────── */
+
+.map-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  background: #0a0a12;
+}
+
+/* Override Leaflet defaults for game feel */
+.leaflet-container { cursor: default !important; }
+.leaflet-grab { cursor: grab !important; }
+.leaflet-dragging .leaflet-grab { cursor: grabbing !important; }
+.leaflet-attribution-flag { display: none !important; }
+.leaflet-control-attribution { font-size: 9px; opacity: 0.4; }
+
+/* Fog canvas */
+.fog-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 400;
+}
+
+/* Settler marker */
+.settler-marker {
+  width: 20px;
+  height: 20px;
+  background: var(--accent2);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(78,204,163,0.8);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.settler-marker:hover { transform: scale(1.2); }
+.settler-marker.settling {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(233,69,96,0.8);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(233,69,96,0.6); }
+  50%       { box-shadow: 0 0 12px rgba(233,69,96,1); }
+}
+
+/* Chunk hover overlay drawn on canvas — no CSS needed */
+
+/* ── Action panel ─────────────────────────────────────────────── */
+
+.action-panel {
+  width: var(--action-w);
+  flex-shrink: 0;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+  position: relative;
+  overflow-y: auto;
+}
+
+.action-panel.hidden {
+  transform: translateX(var(--action-w));
+  pointer-events: none;
+}
+
+.action-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.action-close:hover { color: var(--text); }
+
+.action-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.action-coords {
+  font-size: 0.8rem;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+}
+
+.action-owner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.owner-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.action-fog {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.action-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.action-btn:hover { background: #1a3a6a; border-color: var(--accent2); }
+.action-btn:disabled { opacity: 0.4; cursor: default; }
+.action-btn.primary { background: var(--accent2); color: #111; border-color: var(--accent2); font-weight: 600; }
+.action-btn.primary:hover { background: #3db891; }
+
+.action-info {
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding: 6px 0;
+}
+
+.action-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.action-msg {
+  font-size: 0.82rem;
+  color: var(--accent);
+  padding: 4px 0;
+}

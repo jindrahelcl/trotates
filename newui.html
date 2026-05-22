@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map Rotator — Game</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/newui.css">
+</head>
+<body>
+  <div class="game-layout">
+
+    <!-- Left: stats HUD -->
+    <aside class="stats-panel">
+      <a href="/" class="brand">Map<span>Rotator</span></a>
+      <nav class="nav-links">
+        <a href="/newui" class="nav-active">Game</a>
+        <a href="/map">Overview</a>
+        <a href="/profile">Profile</a>
+      </nav>
+
+      <div class="hud-section">
+        <div class="hud-player" id="hud-player">—</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Balance</div>
+        <div class="hud-value hud-balance" id="hud-balance">—</div>
+        <div class="hud-sub" id="hud-income">— / s</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Movement points</div>
+        <div class="hud-value" id="hud-points">—</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Territory</div>
+        <div class="hud-value" id="hud-tiles">—</div>
+        <div class="hud-sub" id="hud-income-rate-detail"></div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">Settlers</div>
+        <div id="settler-list" class="settler-list"></div>
+      </div>
+    </aside>
+
+    <!-- Center: map -->
+    <div class="map-wrap">
+      <div id="map"></div>
+    </div>
+
+    <!-- Right: action panel (hidden until tile click) -->
+    <aside class="action-panel" id="action-panel">
+      <button class="action-close" id="action-close">✕</button>
+      <div id="action-content"></div>
+    </aside>
+
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/newui.js"></script>
+</body>
+</html>

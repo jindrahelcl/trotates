@@ -77,11 +77,12 @@ function spawnNewPlayer(player) {
   const center     = findSpawnLocation(allTiles);
   const tiles      = starterClusterTiles(center.tx, center.ty, existingKeys);
 
+  const now = new Date().toISOString();
   for (const { tx, ty } of tiles) {
     db.claimTile(tx, ty, WORLD.zoom, player.id, null);
+    db.exploreTile(player.id, tx, ty, WORLD.zoom, now);
   }
 
-  const now = new Date().toISOString();
   db.setBalance(player.id, WORLD.startingBalance, now);
 
   // Place starter settler on the spawn center

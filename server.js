@@ -472,7 +472,7 @@ function handleGetBalance(req, res) {
   const tiles = db.getTilesByOwner(player.id);
   const balance = economy.currentBalance(player, tiles);
   const rate    = economy.incomeRate(tiles);
-  jsonOk(res, { balance, incomeRate: rate, tileCount: tiles.length });
+  jsonOk(res, { balance, incomeRate: rate, tileCount: tiles.length, movementPoints: player.movement_points || 0 });
 }
 
 function handleExplore(req, res) {
@@ -775,7 +775,7 @@ function handleWorldClaim(req, res) {
 const TILE_RE    = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
 const SHORT_RE   = /^\/s\/([a-z]{10})$/;  // page route — serves index.html
 const RESOLVE_RE = /^\/resolve\/([a-z]{10})$/;  // JSON API — returns tile coords
-const STATIC_FILES = new Set(['index.html', 'style.css', 'game.js', 'welcome.html', 'welcome.css', 'welcome.js', 'tiles-anim.js', 'profile.html', 'profile.css', 'profile.js', 'map.html', 'map.css', 'map.js']);
+const STATIC_FILES = new Set(['index.html', 'style.css', 'game.js', 'welcome.html', 'welcome.css', 'welcome.js', 'tiles-anim.js', 'profile.html', 'profile.css', 'profile.js', 'map.html', 'map.css', 'map.js', 'newui.css', 'newui.js']);
 
 const server = http.createServer((req, res) => {
   const qIdx  = req.url.indexOf('?');
@@ -902,6 +902,11 @@ const server = http.createServer((req, res) => {
 
   if (url === '/map') {
     serveStatic(res, path.join(__dirname, 'map.html'));
+    return;
+  }
+
+  if (url === '/newui') {
+    serveStatic(res, path.join(__dirname, 'newui.html'));
     return;
   }
 
