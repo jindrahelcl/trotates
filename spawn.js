@@ -104,8 +104,8 @@ function spawnNewPlayer(player) {
 
   db.setBalance(player.id, WORLD.startingBalance, now);
 
-  // Place starter settler on the spawn center
-  db.createSettler(player.id, center.tx, center.ty);
+  // Place settler on the first starter tile (guaranteed to be in the center chunk)
+  db.createSettler(player.id, tiles[0].tx, tiles[0].ty);
 }
 
 module.exports = { findSpawnLocation, starterClusterTiles, spawnNewPlayer };
