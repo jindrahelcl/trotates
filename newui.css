@@ -326,8 +326,10 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
 #puzzle-close-btn:hover { color: var(--text); }
 #puzzle-grid {
   display: grid;
-  grid-template-columns: repeat(4, min(23vh, 23vw));
-  grid-template-rows:    repeat(4, min(23vh, 23vw));
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows:    repeat(4, 1fr);
+  width: min(90vh, 90%);
+  aspect-ratio: 1;
   gap: 2px;
   background: var(--border);
   padding: 2px;
