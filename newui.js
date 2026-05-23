@@ -364,8 +364,10 @@ function createFogLayer() {
       const m = this._map;
       const { x: w, y: h } = m.getSize();
 
-      // Build explored tile rects HTML (shared between both masks)
-      let featherHtml = '', distHtml = '';
+      // Build explored tile rects HTML
+      // distHtml expands holes by ~1 z13 tile (256px) so immediate neighbours stay bright
+      const DIST_PAD = 260;
+      let featherHtml = '', distHtml = '', distClipHtml = '';
       for (const key of state.exploredZ13) {
         const [tx, ty] = key.split(',').map(Number);
         const pNW = tileContainerPoint(tx,     ty,     13);
@@ -373,8 +375,9 @@ function createFogLayer() {
         const x  = Math.floor(pNW.x) - 2, y  = Math.floor(pNW.y) - 2;
         const rw = Math.ceil(pSE.x) - Math.floor(pNW.x) + 4;
         const rh = Math.ceil(pSE.y) - Math.floor(pNW.y) + 4;
-        featherHtml += `<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="black"/>`;
-        distHtml    += `<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="black"/>`;
+        featherHtml  += `<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="black"/>`;
+        distHtml     += `<rect x="${x - DIST_PAD}" y="${y - DIST_PAD}" width="${rw + DIST_PAD * 2}" height="${rh + DIST_PAD * 2}" fill="black"/>`;
+        distClipHtml += `<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="black"/>`;
       }
 
       // Feather mask
@@ -388,7 +391,7 @@ function createFogLayer() {
       this._mask2.setAttribute('x', 0); this._mask2.setAttribute('y', 0);
       this._mask2.setAttribute('width', w); this._mask2.setAttribute('height', h);
       this._holes2.innerHTML = distHtml;
-      this._holesClip2.innerHTML = distHtml; // unblurred — keeps explored areas fully clear
+      this._holesClip2.innerHTML = distClipHtml; // unblurred exact rects — keeps explored areas fully clear
 
       // Seam canvas
       this._seam.width = w; this._seam.height = h;
