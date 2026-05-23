@@ -120,6 +120,21 @@ async function loadAll() {
   }));
 }
 
+function updateMapBounds() {
+  if (!map) return;
+  const MARGIN = 3; // z13 tiles of padding around explored area
+  if (state.exploredZ13.size === 0) return;
+  let minTx = Infinity, minTy = Infinity, maxTx = -Infinity, maxTy = -Infinity;
+  for (const key of state.exploredZ13) {
+    const [tx, ty] = key.split(',').map(Number);
+    if (tx < minTx) minTx = tx; if (tx > maxTx) maxTx = tx;
+    if (ty < minTy) minTy = ty; if (ty > maxTy) maxTy = ty;
+  }
+  const sw = tilePureLatLng(minTx - MARGIN, maxTy + 1 + MARGIN, 13);
+  const ne = tilePureLatLng(maxTx + 1 + MARGIN, minTy - MARGIN, 13);
+  map.setMaxBounds(L.latLngBounds(sw, ne));
+}
+
 async function loadTilesInView() {
   if (!state.worldConfig) return;
   const bounds = map.getBounds();
@@ -902,6 +917,7 @@ async function onPuzzleWin(solveTimeMs) {
 
   hidePuzzle();
   fogLayer.redraw();
+  updateMapBounds();
 }
 
 function hidePuzzle() {
@@ -1004,6 +1020,7 @@ document.getElementById('puzzle-solve-btn').addEventListener('click', () => {
 
   updateHUD();
   initMap();
+  updateMapBounds();
   updateSettlerMarkers();
   updateSettlerList();
   startBalanceTick();
