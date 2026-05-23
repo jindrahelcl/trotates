@@ -350,8 +350,8 @@ function createFogLayer() {
       this._seam.height = h;
       const sc = this._seam.getContext('2d');
       sc.clearRect(0, 0, w, h);
-      sc.strokeStyle = '#000';
-      sc.lineWidth = 1;
+      sc.strokeStyle = '#0a0a0a';
+      sc.lineWidth = 3;
       for (const key of state.exploredZ13) {
         const [tx, ty] = key.split(',').map(Number);
         const pNW = tileContainerPoint(tx,     ty,     13);
