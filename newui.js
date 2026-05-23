@@ -261,21 +261,58 @@ function createOwnershipLayer() {
 // ── Fog layer ──────────────────────────────────────────────────────────────
 
 function createFogLayer() {
+  const NS = 'http://www.w3.org/2000/svg';
   const layer = {
     _div: null,
+    _holes: null,
+    _maskBg: null,
+    _mask: null,
     addTo(m) {
       this._map = m;
+
+      const svg = document.createElementNS(NS, 'svg');
+      Object.assign(svg.style, { position: 'absolute', width: '0', height: '0', overflow: 'visible' });
+
+      const defs = document.createElementNS(NS, 'defs');
+
+      const filter = document.createElementNS(NS, 'filter');
+      filter.id = 'fog-feather';
+      filter.setAttribute('x', '-50%'); filter.setAttribute('y', '-50%');
+      filter.setAttribute('width', '200%'); filter.setAttribute('height', '200%');
+      const feBlur = document.createElementNS(NS, 'feGaussianBlur');
+      feBlur.setAttribute('stdDeviation', '22');
+      filter.appendChild(feBlur);
+
+      this._mask = document.createElementNS(NS, 'mask');
+      this._mask.id = 'fog-mask';
+      this._mask.setAttribute('maskUnits', 'userSpaceOnUse');
+
+      this._maskBg = document.createElementNS(NS, 'rect');
+      this._maskBg.setAttribute('fill', 'white');
+
+      this._holes = document.createElementNS(NS, 'g');
+      this._holes.setAttribute('filter', 'url(#fog-feather)');
+
+      this._mask.appendChild(this._maskBg);
+      this._mask.appendChild(this._holes);
+      defs.appendChild(filter);
+      defs.appendChild(this._mask);
+      svg.appendChild(defs);
+      m.getContainer().appendChild(svg);
+
       this._div = document.createElement('div');
       Object.assign(this._div.style, {
         position: 'absolute',
         inset: '0',
         pointerEvents: 'none',
         zIndex: '400',
-        backdropFilter: 'blur(12px)',
-        webkitBackdropFilter: 'blur(12px)',
-        filter: 'blur(18px)',
+        backdropFilter: 'blur(14px)',
+        webkitBackdropFilter: 'blur(14px)',
+        mask: 'url(#fog-mask)',
+        webkitMask: 'url(#fog-mask)',
       });
       m.getContainer().appendChild(this._div);
+
       m.on('move resize', () => this.redraw(), this);
       this.redraw();
       return this;
@@ -283,21 +320,24 @@ function createFogLayer() {
     redraw() {
       if (!this._map || !this._div) return;
       const m = this._map;
-      const size = m.getSize();
-      const w = size.x, h = size.y;
+      const { x: w, y: h } = m.getSize();
 
-      let path = `M0,0 L${w},0 L${w},${h} L0,${h} Z`;
+      this._maskBg.setAttribute('width', w);
+      this._maskBg.setAttribute('height', h);
+      this._mask.setAttribute('x', 0); this._mask.setAttribute('y', 0);
+      this._mask.setAttribute('width', w); this._mask.setAttribute('height', h);
 
+      let html = '';
       for (const key of state.exploredZ13) {
         const [tx, ty] = key.split(',').map(Number);
         const pNW = tileContainerPoint(tx,     ty,     13);
         const pSE = tileContainerPoint(tx + 1, ty + 1, 13);
-        const x1 = Math.floor(pNW.x) - 2, y1 = Math.floor(pNW.y) - 2;
-        const x2 = Math.ceil(pSE.x)  + 2, y2 = Math.ceil(pSE.y)  + 2;
-        path += ` M${x1},${y1} L${x2},${y1} L${x2},${y2} L${x1},${y2} Z`;
+        const x = Math.floor(pNW.x) - 2, y = Math.floor(pNW.y) - 2;
+        const rw = Math.ceil(pSE.x) - Math.floor(pNW.x) + 4;
+        const rh = Math.ceil(pSE.y) - Math.floor(pNW.y) + 4;
+        html += `<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="black"/>`;
       }
-
-      this._div.style.clipPath = `path(evenodd, '${path}')`;
+      this._holes.innerHTML = html;
     },
   };
   return layer;
