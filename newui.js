@@ -439,42 +439,29 @@ function resizeHoverCanvas() {
   hoverCanvas.height = size.y;
 }
 
-function chunkFromContainerPoint(px, py) {
-  const latLng  = map.containerPointToLatLng(L.point(px, py));
-  const pt      = map.project(latLng, 15);
-  const tx15    = Math.floor(pt.x / 256);
-  const ty15    = Math.floor(pt.y / 256);
-  const chunkTx = Math.floor(tx15 / 4) * 4;
-  const chunkTy = Math.floor(ty15 / 4) * 4;
-  return { chunkTx, chunkTy };
+function tileFromContainerPoint(px, py) {
+  const latLng = map.containerPointToLatLng(L.point(px, py));
+  const pt     = map.project(latLng, 15);
+  return { tx: Math.floor(pt.x / 256), ty: Math.floor(pt.y / 256) };
 }
 
-function redrawHover(chunkTx, chunkTy) {
+function redrawHover(tx, ty) {
   resizeHoverCanvas();
   hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
-  if (chunkTx == null) return;
-
-  const TILE_PX = 64; // 256/4
-  for (let dx = 0; dx < 4; dx++) {
-    for (let dy = 0; dy < 4; dy++) {
-      const tx = chunkTx + dx, ty = chunkTy + dy;
-      const pNW = tileContainerPoint(tx,     ty,     15);
-      const pSE = tileContainerPoint(tx + 1, ty + 1, 15);
-      hoverCtx.fillStyle = 'rgba(255,255,255,0.18)';
-      hoverCtx.fillRect(pNW.x, pNW.y, pSE.x - pNW.x, pSE.y - pNW.y);
-    }
-  }
+  if (tx == null) return;
+  const pNW = tileContainerPoint(tx,     ty,     15);
+  const pSE = tileContainerPoint(tx + 1, ty + 1, 15);
+  hoverCtx.fillStyle = 'rgba(255,255,255,0.18)';
+  hoverCtx.fillRect(pNW.x, pNW.y, pSE.x - pNW.x, pSE.y - pNW.y);
 }
 
-let _lastHoverChunk = null;
+let _lastHoverTile = null;
 function onMapMouseMove(e) {
   const rect = map.getContainer().getBoundingClientRect();
-  const px   = e.clientX - rect.left;
-  const py   = e.clientY - rect.top;
-  const { chunkTx, chunkTy } = chunkFromContainerPoint(px, py);
-  if (_lastHoverChunk && _lastHoverChunk.tx === chunkTx && _lastHoverChunk.ty === chunkTy) return;
-  _lastHoverChunk = { tx: chunkTx, ty: chunkTy };
-  redrawHover(chunkTx, chunkTy);
+  const { tx, ty } = tileFromContainerPoint(e.clientX - rect.left, e.clientY - rect.top);
+  if (_lastHoverTile && _lastHoverTile.tx === tx && _lastHoverTile.ty === ty) return;
+  _lastHoverTile = { tx, ty };
+  redrawHover(tx, ty);
 }
 
 // ── Settler markers ────────────────────────────────────────────────────────
@@ -549,103 +536,81 @@ function updateHUD() {
 
 // ── Action panel ───────────────────────────────────────────────────────────
 
-function showActionPanel(chunkTx, chunkTy) {
-  selectedChunk = { tx: chunkTx, ty: chunkTy };
+function showActionPanel(tx, ty) {
+  selectedChunk = { tx, ty };
   const panel   = document.getElementById('action-panel');
   const content = document.getElementById('action-content');
   panel.classList.remove('hidden');
 
-  const { tx: tx13, ty: ty13 } = z15toZ13(chunkTx, chunkTy);
+  const { tx: tx13, ty: ty13 } = z15toZ13(tx, ty);
   const isExplored = state.exploredZ13.has(`${tx13},${ty13}`);
   const isAdjacentToExplored = !isExplored && [
     [tx13-1,ty13],[tx13+1,ty13],[tx13,ty13-1],[tx13,ty13+1],
   ].some(([x,y]) => state.exploredZ13.has(`${x},${y}`));
 
-  // Find tiles in this chunk
-  const chunkOwners = new Set();
-  let myTileCount = 0;
-  for (let dx = 0; dx < 4; dx++) {
-    for (let dy = 0; dy < 4; dy++) {
-      const t = state.claimedTiles.get(`${chunkTx+dx},${chunkTy+dy}`);
-      if (t) {
-        chunkOwners.add(t.owner);
-        if (state.player && t.owner === state.player.nickname) myTileCount++;
-      }
-    }
-  }
+  const tileData = state.claimedTiles.get(`${tx},${ty}`);
+  const isOwn    = tileData && state.player && tileData.owner === state.player.nickname;
 
-  // Find settler in this chunk
-  const settlerInChunk = state.settlers.find(
-    s => Math.floor(s.tx / 4) * 4 === chunkTx && Math.floor(s.ty / 4) * 4 === chunkTy
-  );
+  const settlerOnTile = state.settlers.find(s => s.tx === tx && s.ty === ty);
+  const activeSettler = state.selectedSettler != null
+    ? state.settlers.find(s => s.id === state.selectedSettler)
+    : state.settlers[0];
+
+  // Chunk origin for explore (explore is still z13-chunk level)
+  const chunkTx = Math.floor(tx / 4) * 4;
+  const chunkTy = Math.floor(ty / 4) * 4;
 
   let html = `
-    <div class="action-title">Chunk</div>
-    <div class="action-coords">(${chunkTx}, ${chunkTy}) · z15</div>
+    <div class="action-title">Tile</div>
+    <div class="action-coords">(${tx}, ${ty}) · z15</div>
     <hr class="action-divider">
   `;
 
   if (!isExplored) {
     if (isAdjacentToExplored) {
-      html += `<button class="action-btn primary" id="btn-explore">Explore this chunk</button>`;
+      html += `<button class="action-btn primary" id="btn-explore">Explore this area</button>`;
     } else {
-      html += `<div class="action-fog">Unexplored — explore adjacent chunks first.</div>`;
+      html += `<div class="action-fog">Unexplored — explore adjacent tiles first.</div>`;
     }
   } else {
-    if (chunkOwners.size === 0) {
-      html += `<div class="action-info">Unclaimed territory</div>`;
+    if (tileData) {
+      const hue = resolveHue(tileData.owner, tileData.ownerHue);
+      html += `
+        <div class="action-owner">
+          <div class="owner-swatch" style="background:${hslStr(hue)}"></div>
+          <span>${tileData.owner}${isOwn ? ' (you)' : ''}</span>
+        </div>`;
     } else {
-      for (const owner of chunkOwners) {
-        const key = [...state.claimedTiles.entries()].find(([, v]) => v.owner === owner)?.[1];
-        const hue = key ? resolveHue(key.owner, key.ownerHue) : 180;
-        const isYou = state.player && owner === state.player.nickname;
-        html += `
-          <div class="action-owner">
-            <div class="owner-swatch" style="background:${hslStr(hue)}"></div>
-            <span>${owner}${isYou ? ' (you)' : ''}</span>
-          </div>`;
-      }
+      html += `<div class="action-info">Unclaimed territory</div>`;
     }
 
     html += `<hr class="action-divider">`;
 
-    // Settler actions
-    if (settlerInChunk) {
-      const settlerTileClaimed = state.claimedTiles.has(`${settlerInChunk.tx},${settlerInChunk.ty}`);
-      if (!settlerTileClaimed) {
+    if (settlerOnTile) {
+      if (!tileData) {
         html += `<button class="action-btn primary" id="btn-settle">Settle here</button>`;
       } else {
-        html += `<div class="action-info">Your settler is here — tile already claimed.</div>`;
+        html += `<div class="action-info">Your settler is here.</div>`;
       }
-    } else {
-      const activeSettler = state.selectedSettler != null
-        ? state.settlers.find(s => s.id === state.selectedSettler)
-        : state.settlers[0];
-
-      if (activeSettler && chunkOwners.size === 0) {
-        const dist = Math.abs(chunkTx - activeSettler.tx) + Math.abs(chunkTy - activeSettler.ty);
-        const cost = Math.max(0, dist); // simplified — server computes Bresenham
-        html += `
-          <div class="action-info">Settler #${activeSettler.id} at (${activeSettler.tx}, ${activeSettler.ty})</div>
-          <div class="action-info">Approx. cost: ~${cost} pts · you have ${state.movementPoints}</div>
-          <button class="action-btn primary" id="btn-move"
-            ${state.movementPoints < 1 ? 'disabled' : ''}>Move settler here</button>
-        `;
-      } else if (!state.settlers.length) {
-        html += `<div class="action-info">You have no settlers.</div>`;
-      }
+    } else if (activeSettler && !isOwn) {
+      const dist = Math.abs(tx - activeSettler.tx) + Math.abs(ty - activeSettler.ty);
+      html += `
+        <div class="action-info">Settler at (${activeSettler.tx}, ${activeSettler.ty})</div>
+        <div class="action-info">~${dist} pts · you have ${state.movementPoints}</div>
+        <button class="action-btn primary" id="btn-move"
+          ${state.movementPoints < 1 ? 'disabled' : ''}>Move settler here</button>
+      `;
+    } else if (!state.settlers.length) {
+      html += `<div class="action-info">You have no settlers.</div>`;
     }
   }
 
   content.innerHTML = html;
 
   document.getElementById('btn-explore')?.addEventListener('click', () => doExplore(chunkTx, chunkTy));
-  document.getElementById('btn-settle')?.addEventListener('click', () => doSettle(settlerInChunk));
+  document.getElementById('btn-settle')?.addEventListener('click', () => doSettle(settlerOnTile));
   document.getElementById('btn-move')?.addEventListener('click', () => {
-    const s = state.selectedSettler != null
-      ? state.settlers.find(s => s.id === state.selectedSettler)
-      : state.settlers[0];
-    if (s) doMoveSettler(s, chunkTx, chunkTy);
+    if (activeSettler) doMoveSettler(activeSettler, tx, ty);
   });
 }
 
@@ -1043,12 +1008,10 @@ function showMsg(text) {
 
 function onMapClick(e) {
   if (!state.player) return;
-  const pt  = map.project(e.latlng, 15);
-  const tx15 = Math.floor(pt.x / 256);
-  const ty15 = Math.floor(pt.y / 256);
-  const chunkTx = Math.floor(tx15 / 4) * 4;
-  const chunkTy = Math.floor(ty15 / 4) * 4;
-  showActionPanel(chunkTx, chunkTy);
+  const pt = map.project(e.latlng, 15);
+  const tx = Math.floor(pt.x / 256);
+  const ty = Math.floor(pt.y / 256);
+  showActionPanel(tx, ty);
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
