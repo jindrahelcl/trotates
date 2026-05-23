@@ -558,7 +558,7 @@ let _ghostSize = 80;
 function _showGhost(idx, x, y) {
   const grid = document.getElementById('puzzle-grid');
   const cell = grid.querySelector('.puzzle-tile');
-  _ghostSize = cell ? cell.offsetWidth : 80;
+  _ghostSize = cell ? Math.round(cell.offsetWidth * 1.15) : 92;
   _ghost.el.style.width = _ghost.el.style.height = _ghostSize + 'px';
   _ghost.img.src = `/tiles/outdoor/15/${puzzle.tiles[idx].x}/${puzzle.tiles[idx].y}`;
   _ghost.img.style.transform = `rotate(${puzzle.tiles[idx].rotation}deg)`;
@@ -572,7 +572,7 @@ function _positionGhost(x, y) {
 function _hideGhost() { _ghost.el.style.display = 'none'; }
 
 // Drag state
-const DRAG_THRESHOLD = 5;
+const DRAG_THRESHOLD = 12;
 let _dragSrcIdx = null, _isDragging = false, _suppressClick = false;
 let _dragStartX = 0, _dragStartY = 0;
 let _touchDragSrc = null;
@@ -608,10 +608,10 @@ function _swapTiles(a, b) {
 
 function _rotateTile(idx) {
   if (!puzzle || puzzle.solved) return;
-  puzzle.tiles[idx].rotation = (puzzle.tiles[idx].rotation + 90) % 360;
+  puzzle.tiles[idx].rotation += 90;
   const img = document.querySelectorAll('.puzzle-tile')[idx]?.querySelector('img');
   if (img) img.style.transform = `rotate(${puzzle.tiles[idx].rotation}deg)`;
-  setTimeout(checkPuzzleWin, 220);
+  setTimeout(checkPuzzleWin, 270);
 }
 
 // Mouse handlers — on document, guarded by puzzle state
@@ -669,6 +669,7 @@ _puzzleGrid.addEventListener('click', e => {
 });
 _puzzleGrid.addEventListener('touchstart', e => {
   if (!puzzle || puzzle.solved) return;
+  e.preventDefault();
   const touch = e.changedTouches[0];
   const el = document.elementFromPoint(touch.clientX, touch.clientY);
   const cell = el && el.closest('.puzzle-tile');
@@ -676,7 +677,7 @@ _puzzleGrid.addEventListener('touchstart', e => {
   _touchDragSrc = { idx: parseInt(cell.dataset.idx), id: touch.identifier };
   _dragStartX = touch.clientX; _dragStartY = touch.clientY;
   _isDragging = false;
-}, { passive: true });
+}, { passive: false });
 _puzzleGrid.addEventListener('touchmove', e => {
   if (!_touchDragSrc) return;
   for (const touch of e.changedTouches) {
@@ -699,6 +700,7 @@ _puzzleGrid.addEventListener('touchmove', e => {
 }, { passive: false });
 _puzzleGrid.addEventListener('touchend', e => {
   if (!_touchDragSrc) return;
+  e.preventDefault();
   for (const touch of e.changedTouches) {
     if (touch.identifier !== _touchDragSrc.id) continue;
     if (_isDragging) {
