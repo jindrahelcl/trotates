@@ -621,6 +621,11 @@ function handleCompleteSettle(req, res) {
       }
       const bonusTiles = candidates.slice(0, bonusCount - 1); // -1 because settler tile counts as 1
 
+      // Snapshot balance before tile count changes (lazy accrual — rate is about to increase)
+      const currentTiles = db.getTilesByOwner(player.id);
+      const snapshotBalance = economy.currentBalance(player, currentTiles);
+      db.setBalance(player.id, snapshotBalance, new Date().toISOString());
+
       const claimed = [{ tx, ty }];
       const bonus = Math.random() < WORLD.bonusChance ? 1 : null;
       db.claimTile(tx, ty, zoom, player.id, bonus);
