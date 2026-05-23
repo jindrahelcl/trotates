@@ -606,9 +606,9 @@ function _swapTiles(a, b) {
   setTimeout(checkPuzzleWin, 50);
 }
 
-function _rotateTile(idx) {
+function _rotateTile(idx, dir = 1) {
   if (!puzzle || puzzle.solved) return;
-  puzzle.tiles[idx].rotation += 90;
+  puzzle.tiles[idx].rotation += 90 * dir;
   const img = document.querySelectorAll('.puzzle-tile')[idx]?.querySelector('img');
   if (img) img.style.transform = `rotate(${puzzle.tiles[idx].rotation}deg)`;
   setTimeout(checkPuzzleWin, 270);
@@ -658,6 +658,13 @@ document.addEventListener('mouseup', e => {
 });
 window.addEventListener('blur', _cancelDrag);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && puzzle) { _cancelDrag(); hidePuzzle(); } });
+_puzzleGrid.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (_dragSrcIdx !== null) { _cancelDrag(); return; }
+  const cell = e.target.closest('.puzzle-tile');
+  if (cell) _rotateTile(parseInt(cell.dataset.idx), -1);
+});
+document.addEventListener('contextmenu', e => { if (_dragSrcIdx !== null) _cancelDrag(); });
 
 // Grid-level: click to rotate, touch drag
 const _puzzleGrid = document.getElementById('puzzle-grid');

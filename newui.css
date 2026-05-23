@@ -330,9 +330,9 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
   grid-template-rows:    repeat(4, 1fr);
   width: min(90vh, 90%);
   aspect-ratio: 1;
-  gap: 2px;
-  background: var(--border);
-  padding: 2px;
+  gap: 3px;
+  background: #0a0a12;
+  padding: 3px;
 }
 .puzzle-tile {
   overflow: hidden;
