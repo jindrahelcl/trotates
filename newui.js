@@ -863,17 +863,29 @@ function showPuzzle(chunkTx, chunkTy, mode, settlerId = null) {
     [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
   }
 
-  puzzle = { tiles, baseTiles, startTime: Date.now(), mode, chunkTx, chunkTy, settlerId, solved: false };
+  puzzle = { tiles, baseTiles, startTime: null, mode, chunkTx, chunkTy, settlerId, solved: false };
   document.getElementById('puzzle-label').textContent = mode === 'explore' ? 'Explore' : 'Settle';
-  renderPuzzle();
+  document.getElementById('puzzle-timer').textContent = '—';
 
   overlay.classList.add('visible');
-  startPuzzleTimer();
+  renderPuzzle();
 }
 
 function renderPuzzle() {
   const grid = document.getElementById('puzzle-grid');
+  const loading = document.getElementById('puzzle-loading');
+  const bar = document.getElementById('puzzle-loading-bar');
+  const txt = document.getElementById('puzzle-loading-text');
+
   grid.innerHTML = '';
+  grid.style.visibility = 'hidden';
+  loading.style.display = 'flex';
+  bar.style.width = '0%';
+
+  let loaded = 0;
+  const total = puzzle.tiles.length;
+  txt.textContent = `Loading tiles… 0 / ${total}`;
+
   puzzle.tiles.forEach((tile, idx) => {
     const cell = document.createElement('div');
     cell.className = 'puzzle-tile';
@@ -883,6 +895,21 @@ function renderPuzzle() {
     img.src = `/tiles/outdoor/15/${tile.x}/${tile.y}`;
     img.style.transform = `rotate(${tile.rotation}deg)`;
     img.draggable = false;
+
+    const onSettle = () => {
+      loaded++;
+      bar.style.width = `${(loaded / total) * 100}%`;
+      txt.textContent = `Loading tiles… ${loaded} / ${total}`;
+      if (loaded === total) {
+        loading.style.display = 'none';
+        grid.style.visibility = '';
+        puzzle.startTime = Date.now();
+        startPuzzleTimer();
+      }
+    };
+    img.onload = onSettle;
+    img.onerror = onSettle;
+
     cell.appendChild(img);
     grid.appendChild(cell);
   });
@@ -901,7 +928,7 @@ function startPuzzleTimer() {
 }
 
 function checkPuzzleWin() {
-  if (!puzzle || puzzle.solved) return;
+  if (!puzzle || puzzle.solved || !puzzle.startTime) return;
   const won = puzzle.tiles.every((t, i) =>
     t.x === puzzle.baseTiles[i].x && t.y === puzzle.baseTiles[i].y && t.rotation % 360 === 0
   );

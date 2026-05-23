@@ -335,6 +335,32 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
   padding: 2px 6px;
 }
 #puzzle-close-btn:hover { color: var(--text); }
+#puzzle-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(90vh, 90%);
+}
+#puzzle-loading-bar-wrap {
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+#puzzle-loading-bar {
+  height: 100%;
+  background: var(--accent2);
+  width: 0%;
+  transition: width 0.15s ease;
+}
+#puzzle-loading-text {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 #puzzle-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
