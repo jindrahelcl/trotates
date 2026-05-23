@@ -658,16 +658,16 @@ document.addEventListener('mouseup', e => {
 });
 window.addEventListener('blur', _cancelDrag);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && puzzle) { _cancelDrag(); hidePuzzle(); } });
+document.addEventListener('contextmenu', e => { if (_dragSrcIdx !== null) _cancelDrag(); });
+
+// Grid-level: click to rotate, touch drag
+const _puzzleGrid = document.getElementById('puzzle-grid');
 _puzzleGrid.addEventListener('contextmenu', e => {
   e.preventDefault();
   if (_dragSrcIdx !== null) { _cancelDrag(); return; }
   const cell = e.target.closest('.puzzle-tile');
   if (cell) _rotateTile(parseInt(cell.dataset.idx), -1);
 });
-document.addEventListener('contextmenu', e => { if (_dragSrcIdx !== null) _cancelDrag(); });
-
-// Grid-level: click to rotate, touch drag
-const _puzzleGrid = document.getElementById('puzzle-grid');
 _puzzleGrid.addEventListener('click', e => {
   if (_suppressClick) { _suppressClick = false; return; }
   if (!puzzle || puzzle.solved) return;
