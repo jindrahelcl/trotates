@@ -275,94 +275,117 @@ function createOwnershipLayer() {
 
 // ── Fog layer ──────────────────────────────────────────────────────────────
 
+function _makeSvgDefs(NS, m) {
+  const svg = document.createElementNS(NS, 'svg');
+  Object.assign(svg.style, { position: 'absolute', width: '0', height: '0', overflow: 'visible' });
+  const defs = document.createElementNS(NS, 'defs');
+  svg.appendChild(defs);
+  m.getContainer().appendChild(svg);
+  return defs;
+}
+
+function _makeSvgFilter(NS, defs, id, stdDeviation, spread = '200%') {
+  const filter = document.createElementNS(NS, 'filter');
+  filter.id = id;
+  const pad = `${(parseInt(spread) - 100) / 2}%`;
+  filter.setAttribute('x', `-${pad}`); filter.setAttribute('y', `-${pad}`);
+  filter.setAttribute('width', spread); filter.setAttribute('height', spread);
+  const feBlur = document.createElementNS(NS, 'feGaussianBlur');
+  feBlur.setAttribute('stdDeviation', stdDeviation);
+  filter.appendChild(feBlur);
+  defs.appendChild(filter);
+}
+
+function _makeSvgMask(NS, defs, id, bgFill, filterRef) {
+  const mask = document.createElementNS(NS, 'mask');
+  mask.id = id; mask.setAttribute('maskUnits', 'userSpaceOnUse');
+  const bg = document.createElementNS(NS, 'rect');
+  bg.setAttribute('fill', bgFill);
+  const holes = document.createElementNS(NS, 'g');
+  if (filterRef) holes.setAttribute('filter', `url(#${filterRef})`);
+  mask.appendChild(bg); mask.appendChild(holes);
+  defs.appendChild(mask);
+  return { mask, bg, holes };
+}
+
 function createFogLayer() {
   const NS = 'http://www.w3.org/2000/svg';
   const layer = {
-    _div: null,
-    _holes: null,
-    _maskBg: null,
-    _mask: null,
     addTo(m) {
       this._map = m;
 
-      const svg = document.createElementNS(NS, 'svg');
-      Object.assign(svg.style, { position: 'absolute', width: '0', height: '0', overflow: 'visible' });
+      // ── Feathered blur layer (blur(14px) backdrop, soft boundary) ──
+      const defs1 = _makeSvgDefs(NS, m);
+      _makeSvgFilter(NS, defs1, 'fog-feather', '22', '200%');
+      const { mask: mask1, bg: bg1, holes: holes1 } = _makeSvgMask(NS, defs1, 'fog-mask', 'white', 'fog-feather');
+      this._mask1 = mask1; this._bg1 = bg1; this._holes1 = holes1;
 
-      const defs = document.createElementNS(NS, 'defs');
-
-      const filter = document.createElementNS(NS, 'filter');
-      filter.id = 'fog-feather';
-      filter.setAttribute('x', '-50%'); filter.setAttribute('y', '-50%');
-      filter.setAttribute('width', '200%'); filter.setAttribute('height', '200%');
-      const feBlur = document.createElementNS(NS, 'feGaussianBlur');
-      feBlur.setAttribute('stdDeviation', '22');
-      filter.appendChild(feBlur);
-
-      this._mask = document.createElementNS(NS, 'mask');
-      this._mask.id = 'fog-mask';
-      this._mask.setAttribute('maskUnits', 'userSpaceOnUse');
-
-      this._maskBg = document.createElementNS(NS, 'rect');
-      this._maskBg.setAttribute('fill', 'white');
-
-      this._holes = document.createElementNS(NS, 'g');
-      this._holes.setAttribute('filter', 'url(#fog-feather)');
-
-      this._mask.appendChild(this._maskBg);
-      this._mask.appendChild(this._holes);
-      defs.appendChild(filter);
-      defs.appendChild(this._mask);
-      svg.appendChild(defs);
-      m.getContainer().appendChild(svg);
-
-      this._div = document.createElement('div');
-      Object.assign(this._div.style, {
-        position: 'absolute',
-        inset: '0',
-        pointerEvents: 'none',
-        zIndex: '400',
-        backdropFilter: 'blur(14px)',
-        webkitBackdropFilter: 'blur(14px)',
-        mask: 'url(#fog-mask)',
-        webkitMask: 'url(#fog-mask)',
+      this._blurDiv = document.createElement('div');
+      Object.assign(this._blurDiv.style, {
+        position: 'absolute', inset: '0', pointerEvents: 'none', zIndex: '400',
+        backdropFilter: 'blur(14px)', webkitBackdropFilter: 'blur(14px)',
+        mask: 'url(#fog-mask)', webkitMask: 'url(#fog-mask)',
       });
-      m.getContainer().appendChild(this._div);
+      m.getContainer().appendChild(this._blurDiv);
 
+      // ── Seam canvas ──
       this._seam = document.createElement('canvas');
       Object.assign(this._seam.style, {
         position: 'absolute', inset: '0', pointerEvents: 'none', zIndex: '401',
       });
       m.getContainer().appendChild(this._seam);
 
+      // ── Distance darkness layer (solid black, fades to pitch black far away) ──
+      const defs2 = _makeSvgDefs(NS, m);
+      _makeSvgFilter(NS, defs2, 'fog-dist', '350', '600%');
+      // Mask: white bg = show black overlay; black explored rects blurred = hide overlay near explored
+      const { mask: mask2, bg: bg2, holes: holes2 } = _makeSvgMask(NS, defs2, 'fog-dist-mask', 'white', 'fog-dist');
+      this._mask2 = mask2; this._bg2 = bg2; this._holes2 = holes2;
+
+      this._darkDiv = document.createElement('div');
+      Object.assign(this._darkDiv.style, {
+        position: 'absolute', inset: '0', pointerEvents: 'none', zIndex: '402',
+        background: '#000',
+        mask: 'url(#fog-dist-mask)', webkitMask: 'url(#fog-dist-mask)',
+      });
+      m.getContainer().appendChild(this._darkDiv);
+
       m.on('move resize', () => this.redraw(), this);
       this.redraw();
       return this;
     },
     redraw() {
-      if (!this._map || !this._div) return;
+      if (!this._map) return;
       const m = this._map;
       const { x: w, y: h } = m.getSize();
 
-      this._maskBg.setAttribute('width', w);
-      this._maskBg.setAttribute('height', h);
-      this._mask.setAttribute('x', 0); this._mask.setAttribute('y', 0);
-      this._mask.setAttribute('width', w); this._mask.setAttribute('height', h);
-
-      let html = '';
+      // Build explored tile rects HTML (shared between both masks)
+      let featherHtml = '', distHtml = '';
       for (const key of state.exploredZ13) {
         const [tx, ty] = key.split(',').map(Number);
         const pNW = tileContainerPoint(tx,     ty,     13);
         const pSE = tileContainerPoint(tx + 1, ty + 1, 13);
-        const x = Math.floor(pNW.x) - 2, y = Math.floor(pNW.y) - 2;
+        const x  = Math.floor(pNW.x) - 2, y  = Math.floor(pNW.y) - 2;
         const rw = Math.ceil(pSE.x) - Math.floor(pNW.x) + 4;
         const rh = Math.ceil(pSE.y) - Math.floor(pNW.y) + 4;
-        html += `<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="black"/>`;
+        featherHtml += `<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="black"/>`;
+        distHtml    += `<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="black"/>`;
       }
-      this._holes.innerHTML = html;
 
-      // Black seam lines between adjacent explored tiles
-      this._seam.width = w;
-      this._seam.height = h;
+      // Feather mask
+      this._bg1.setAttribute('width', w); this._bg1.setAttribute('height', h);
+      this._mask1.setAttribute('x', 0); this._mask1.setAttribute('y', 0);
+      this._mask1.setAttribute('width', w); this._mask1.setAttribute('height', h);
+      this._holes1.innerHTML = featherHtml;
+
+      // Distance darkness mask
+      this._bg2.setAttribute('width', w); this._bg2.setAttribute('height', h);
+      this._mask2.setAttribute('x', 0); this._mask2.setAttribute('y', 0);
+      this._mask2.setAttribute('width', w); this._mask2.setAttribute('height', h);
+      this._holes2.innerHTML = distHtml;
+
+      // Seam canvas
+      this._seam.width = w; this._seam.height = h;
       const sc = this._seam.getContext('2d');
       sc.clearRect(0, 0, w, h);
       sc.strokeStyle = 'rgba(180,180,200,0.4)';
