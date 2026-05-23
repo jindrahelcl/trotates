@@ -1068,6 +1068,7 @@ async function doMoveSettler(settler, tx, ty, btn = null) {
     state.movementPoints = res.remainingPoints;
     await refreshSettlers();
     showActionPanel(tx, ty);
+    flashClaimedTiles([{ tx, ty }]);
     refreshBalance();
   } catch (e) {
     showToast('Move failed — check connection.', true);
