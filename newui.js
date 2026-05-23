@@ -296,7 +296,7 @@ function _makeSvgFilter(NS, defs, id, stdDeviation, spread = '200%') {
   defs.appendChild(filter);
 }
 
-function _makeSvgMask(NS, defs, id, bgFill, filterRef) {
+function _makeSvgMask(NS, defs, id, bgFill, filterRef, extraHoles = false) {
   const mask = document.createElementNS(NS, 'mask');
   mask.id = id; mask.setAttribute('maskUnits', 'userSpaceOnUse');
   const bg = document.createElementNS(NS, 'rect');
@@ -304,8 +304,13 @@ function _makeSvgMask(NS, defs, id, bgFill, filterRef) {
   const holes = document.createElementNS(NS, 'g');
   if (filterRef) holes.setAttribute('filter', `url(#${filterRef})`);
   mask.appendChild(bg); mask.appendChild(holes);
+  let holesClip = null;
+  if (extraHoles) {
+    holesClip = document.createElementNS(NS, 'g');
+    mask.appendChild(holesClip);
+  }
   defs.appendChild(mask);
-  return { mask, bg, holes };
+  return { mask, bg, holes, holesClip };
 }
 
 function createFogLayer() {
@@ -338,9 +343,9 @@ function createFogLayer() {
       // ── Distance darkness layer (solid black, fades to pitch black far away) ──
       const defs2 = _makeSvgDefs(NS, m);
       _makeSvgFilter(NS, defs2, 'fog-dist', '350', '600%');
-      // Mask: white bg = show black overlay; black explored rects blurred = hide overlay near explored
-      const { mask: mask2, bg: bg2, holes: holes2 } = _makeSvgMask(NS, defs2, 'fog-dist-mask', 'white', 'fog-dist');
-      this._mask2 = mask2; this._bg2 = bg2; this._holes2 = holes2;
+      // Mask: white bg = show black overlay; blurred black rects = gradient; unblurred clip = keep explored clear
+      const { mask: mask2, bg: bg2, holes: holes2, holesClip: holesClip2 } = _makeSvgMask(NS, defs2, 'fog-dist-mask', 'white', 'fog-dist', true);
+      this._mask2 = mask2; this._bg2 = bg2; this._holes2 = holes2; this._holesClip2 = holesClip2;
 
       this._darkDiv = document.createElement('div');
       Object.assign(this._darkDiv.style, {
@@ -383,6 +388,7 @@ function createFogLayer() {
       this._mask2.setAttribute('x', 0); this._mask2.setAttribute('y', 0);
       this._mask2.setAttribute('width', w); this._mask2.setAttribute('height', h);
       this._holes2.innerHTML = distHtml;
+      this._holesClip2.innerHTML = distHtml; // unblurred — keeps explored areas fully clear
 
       // Seam canvas
       this._seam.width = w; this._seam.height = h;
