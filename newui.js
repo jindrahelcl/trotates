@@ -428,7 +428,9 @@ function startBalanceTick() {
 
 function updateHUD() {
   const p = state.player;
-  document.getElementById('hud-player').textContent = p ? p.nickname : '(not logged in)';
+  const nick = p ? p.nickname : '—';
+  document.getElementById('hud-player').textContent = nick;
+  document.getElementById('header-avatar').textContent = nick ? nick[0].toUpperCase() : '?';
 }
 
 // ── Action panel ───────────────────────────────────────────────────────────

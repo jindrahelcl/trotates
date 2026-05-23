@@ -52,10 +52,30 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
 .nav-links a:hover     { color: var(--text); background: var(--border); }
 .nav-links a.nav-active { color: var(--accent2); background: var(--border); }
 
-.header-player {
-  font-size: 0.82rem;
-  font-weight: 600;
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
   color: var(--accent2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.header-user:hover { opacity: 0.8; }
+
+.header-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent2);
+  flex-shrink: 0;
 }
 
 .hud-section {
