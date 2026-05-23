@@ -990,8 +990,8 @@ async function doMoveSettler(settler, tx, ty, btn = null) {
     }
     state.movementPoints = res.remainingPoints;
     await refreshSettlers();
-    await refreshBalance();
     showActionPanel(tx, ty);
+    refreshBalance();
   } catch (e) {
     showToast('Move failed — check connection.', true);
     if (btn) { btn.disabled = false; btn.textContent = 'Move settler here'; }
