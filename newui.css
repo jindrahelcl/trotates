@@ -20,6 +20,7 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
 /* ── Stats panel ──────────────────────────────────────────────── */
@@ -191,17 +192,19 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
 
 .action-panel {
   width: var(--action-w);
-  flex-shrink: 0;
   background: var(--panel);
   border-left: 1px solid var(--border);
   padding: 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transform: translateX(0);
   transition: transform 0.2s ease;
-  position: relative;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
   overflow-y: auto;
+  z-index: 10;
 }
 
 .action-panel.hidden {
