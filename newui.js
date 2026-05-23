@@ -614,8 +614,11 @@ function showActionPanel(tx, ty) {
 
   document.getElementById('btn-explore')?.addEventListener('click', () => doExplore(chunkTx, chunkTy));
   document.getElementById('btn-settle')?.addEventListener('click', () => doSettle(settlerOnTile));
-  document.getElementById('btn-move')?.addEventListener('click', () => {
-    if (activeSettler) doMoveSettler(activeSettler, tx, ty);
+  document.getElementById('btn-move')?.addEventListener('click', function() {
+    if (!activeSettler) return;
+    this.disabled = true;
+    this.textContent = 'Moving…';
+    doMoveSettler(activeSettler, tx, ty, this);
   });
 }
 
@@ -967,7 +970,7 @@ function doExplore(chunkTx, chunkTy) {
   showPuzzle(chunkTx, chunkTy, 'explore');
 }
 
-async function doMoveSettler(settler, tx, ty) {
+async function doMoveSettler(settler, tx, ty, btn = null) {
   try {
     const res = await fetchJSON('/world/settler/move', {
       method: 'POST',
@@ -982,6 +985,7 @@ async function doMoveSettler(settler, tx, ty) {
       } else {
         showToast(`Move failed: ${res.error}`, true);
       }
+      if (btn) { btn.disabled = false; btn.textContent = 'Move settler here'; }
       return;
     }
     state.movementPoints = res.remainingPoints;
@@ -990,6 +994,7 @@ async function doMoveSettler(settler, tx, ty) {
     showActionPanel(tx, ty);
   } catch (e) {
     showToast('Move failed — check connection.', true);
+    if (btn) { btn.disabled = false; btn.textContent = 'Move settler here'; }
   }
 }
 
