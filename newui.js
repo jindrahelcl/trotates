@@ -849,7 +849,7 @@ function renderPuzzle() {
   const txt = document.getElementById('puzzle-loading-text');
 
   grid.innerHTML = '';
-  grid.style.visibility = 'hidden';
+  grid.style.display = 'none';
   loading.style.display = 'flex';
   bar.style.width = '0%';
 
@@ -873,7 +873,7 @@ function renderPuzzle() {
       txt.textContent = `Loading tiles… ${loaded} / ${total}`;
       if (loaded === total) {
         loading.style.display = 'none';
-        grid.style.visibility = '';
+        grid.style.display = '';
         puzzle.startTime = Date.now();
         startPuzzleTimer();
       }
