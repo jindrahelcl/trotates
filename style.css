@@ -13,13 +13,6 @@ body {
   flex-direction: column;
 }
 
-header h1 {
-  font-size: 1.3rem;
-}
-
-header h1 a:hover {
-  opacity: 0.8;
-}
 
 .controls {
   display: flex;
