@@ -122,7 +122,7 @@ async function loadAll() {
 
 function updateMapBounds() {
   if (!map) return;
-  const MARGIN = 3; // z13 tiles of padding around explored area
+  const MARGIN = 5; // z13 tiles of padding around explored area
   if (state.exploredZ13.size === 0) return;
   let minTx = Infinity, minTy = Infinity, maxTx = -Infinity, maxTy = -Infinity;
   for (const key of state.exploredZ13) {
