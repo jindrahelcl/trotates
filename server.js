@@ -541,39 +541,6 @@ function handleGetSettlers(req, res) {
   jsonOk(res, db.getSettlersByPlayer(player.id));
 }
 
-function handleStartSettle(req, res) {
-  const player = auth.requireAuth(req, res);
-  if (!player) return;
-  let body = '';
-  req.on('data', chunk => { body += chunk; });
-  req.on('end', () => {
-    try {
-      const { settlerId } = JSON.parse(body);
-      if (typeof settlerId !== 'number') throw new Error();
-
-      const settler = db.getSettler(settlerId);
-      if (!settler || settler.player_id !== player.id)
-        return jsonOk(res, { ok: false, error: 'not_found' });
-      if (settler.status === 'settling')
-        return jsonOk(res, { ok: false, error: 'already_settling' });
-
-      const { tx, ty } = settler;
-      const existing = db.getTile(tx, ty, WORLD.zoom);
-      if (existing)
-        return jsonOk(res, { ok: false, error: 'already_claimed' });
-
-      db.setSettlerStatus(settlerId, 'settling');
-
-      // Chunk origin: align to puzzleW × puzzleH grid
-      const chunkTx = Math.floor(tx / WORLD.puzzleW) * WORLD.puzzleW;
-      const chunkTy = Math.floor(ty / WORLD.puzzleH) * WORLD.puzzleH;
-
-      jsonOk(res, { ok: true, tx, ty, chunkTx, chunkTy, puzzleW: WORLD.puzzleW, puzzleH: WORLD.puzzleH });
-    } catch {
-      res.writeHead(400); res.end('Bad request');
-    }
-  });
-}
 
 function handleCompleteSettle(req, res) {
   const player = auth.requireAuth(req, res);
@@ -750,30 +717,6 @@ function handleWorldOverview(query, res) {
   jsonOk(res, result);
 }
 
-function handleWorldClaim(req, res) {
-  const player = auth.requireAuth(req, res);
-  if (!player) return;
-  let body = '';
-  req.on('data', chunk => { body += chunk; });
-  req.on('end', () => {
-    try {
-      const { tx, ty } = JSON.parse(body);
-      if (typeof tx !== 'number' || typeof ty !== 'number') throw new Error();
-      if (tx < WORLD.czTxMin || tx > WORLD.czTxMax || ty < WORLD.czTyMin || ty > WORLD.czTyMax)
-        return jsonOk(res, { ok: false, error: 'out_of_bounds' });
-
-      const existing = db.getTile(tx, ty, WORLD.zoom);
-      if (existing)
-        return jsonOk(res, { ok: false, error: 'already_claimed' });
-
-      const bonus = Math.random() < WORLD.bonusChance ? 1 : null;
-      db.claimTile(tx, ty, WORLD.zoom, player.id, bonus);
-      jsonOk(res, { ok: true, bonus });
-    } catch {
-      res.writeHead(400); res.end('Bad request');
-    }
-  });
-}
 
 // ── Router ────────────────────────────────────────────────────────────────
 const TILE_RE    = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
@@ -854,20 +797,12 @@ const server = http.createServer((req, res) => {
     return handleMoveSettler(req, res);
   }
 
-  if (url === '/world/settler/settle' && req.method === 'POST') {
-    return handleStartSettle(req, res);
-  }
-
   if (url === '/world/settler/complete' && req.method === 'POST') {
     return handleCompleteSettle(req, res);
   }
 
   if (url.startsWith('/world/tiles') && req.method === 'GET') {
     return handleWorldTiles(query, res);
-  }
-
-  if (url === '/world/claim' && req.method === 'POST') {
-    return handleWorldClaim(req, res);
   }
 
   if (url.startsWith('/world/overview') && req.method === 'GET') {
