@@ -285,7 +285,7 @@ function createFogLayer() {
       c.style.top  = `-${PAD}px`;
 
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#0a0a12';
+      ctx.fillStyle = '#0a0a0a';
       ctx.fillRect(0, 0, c.width, c.height);
       ctx.globalCompositeOperation = 'destination-out';
       ctx.fillStyle = '#000';

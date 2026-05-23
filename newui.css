@@ -3,11 +3,11 @@
 :root {
   --accent:   #e94560;
   --accent2:  #4ecca3;
-  --bg:       #1a1a2e;
-  --panel:    #16213e;
-  --border:   #0f3460;
+  --bg:       #1a1a1a;
+  --panel:    #222;
+  --border:   #333;
   --text:     #eee;
-  --muted:    #667;
+  --muted:    #666;
   --stats-w:  210px;
   --action-w: 260px;
 }
@@ -136,7 +136,7 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
 #map {
   width: 100%;
   height: 100%;
-  background: #0a0a12;
+  background: #0a0a0a;
 }
 
 /* Override Leaflet defaults for game feel */
@@ -290,7 +290,7 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
   position: absolute;
   inset: 0;
   z-index: 500;
-  background: rgba(10,10,18,0.93);
+  background: rgba(10,10,10,0.93);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -331,13 +331,13 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
   width: min(90vh, 90%);
   aspect-ratio: 1;
   gap: 3px;
-  background: #0a0a12;
+  background: #0a0a0a;
   padding: 3px;
 }
 .puzzle-tile {
   overflow: hidden;
   cursor: pointer;
-  background: #0a0a12;
+  background: #0a0a0a;
   user-select: none;
   border-radius: 3px;
   position: relative;
