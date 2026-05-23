@@ -273,6 +273,7 @@ function createFogLayer() {
         zIndex: '400',
         backdropFilter: 'blur(12px)',
         webkitBackdropFilter: 'blur(12px)',
+        filter: 'blur(18px)',
       });
       m.getContainer().appendChild(this._div);
       m.on('move resize', () => this.redraw(), this);
