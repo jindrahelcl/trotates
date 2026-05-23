@@ -313,6 +313,12 @@ function createFogLayer() {
       });
       m.getContainer().appendChild(this._div);
 
+      this._seam = document.createElement('canvas');
+      Object.assign(this._seam.style, {
+        position: 'absolute', inset: '0', pointerEvents: 'none', zIndex: '401',
+      });
+      m.getContainer().appendChild(this._seam);
+
       m.on('move resize', () => this.redraw(), this);
       this.redraw();
       return this;
@@ -338,6 +344,27 @@ function createFogLayer() {
         html += `<rect x="${x}" y="${y}" width="${rw}" height="${rh}" fill="black"/>`;
       }
       this._holes.innerHTML = html;
+
+      // Black seam lines between adjacent explored tiles
+      this._seam.width = w;
+      this._seam.height = h;
+      const sc = this._seam.getContext('2d');
+      sc.clearRect(0, 0, w, h);
+      sc.strokeStyle = '#000';
+      sc.lineWidth = 1;
+      for (const key of state.exploredZ13) {
+        const [tx, ty] = key.split(',').map(Number);
+        const pNW = tileContainerPoint(tx,     ty,     13);
+        const pSE = tileContainerPoint(tx + 1, ty + 1, 13);
+        const x1 = Math.round(pNW.x), y1 = Math.round(pNW.y);
+        const x2 = Math.round(pSE.x), y2 = Math.round(pSE.y);
+        if (state.exploredZ13.has(`${tx + 1},${ty}`)) {
+          sc.beginPath(); sc.moveTo(x2 + 0.5, y1); sc.lineTo(x2 + 0.5, y2); sc.stroke();
+        }
+        if (state.exploredZ13.has(`${tx},${ty + 1}`)) {
+          sc.beginPath(); sc.moveTo(x1, y2 + 0.5); sc.lineTo(x2, y2 + 0.5); sc.stroke();
+        }
+      }
     },
   };
   return layer;
