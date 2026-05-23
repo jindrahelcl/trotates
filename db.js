@@ -121,6 +121,7 @@ const stmts = {
   exploreTile:         db.prepare('INSERT OR IGNORE INTO explored_tiles (player_id, tx, ty, zoom) VALUES (?, ?, ?, ?)'),
   getExploredByPlayer: db.prepare('SELECT tx, ty, zoom, explored_at FROM explored_tiles WHERE player_id = ?'),
   isExplored:          db.prepare('SELECT 1 FROM explored_tiles WHERE player_id = ? AND tx = ? AND ty = ? AND zoom = ?'),
+  isChunkExplored:     db.prepare('SELECT 1 FROM explored_tiles WHERE player_id = ? AND tx >= ? AND tx < ? AND ty >= ? AND ty < ? AND zoom = ? LIMIT 1'),
 
   logSolve:            db.prepare('INSERT INTO solve_log (player_id, tx, ty, zoom, solve_time_ms) VALUES (?, ?, ?, ?, ?)'),
   getPrevDaySolveTimes: db.prepare("SELECT solve_time_ms FROM solve_log WHERE date(solved_at) = date('now', '-1 day')"),
@@ -186,6 +187,9 @@ function getAllTilesForSpawn()            { return stmts.allTiles.all(); }
 function exploreTile(playerId, tx, ty, zoom) { stmts.exploreTile.run(playerId, tx, ty, zoom); }
 function getExploredByPlayer(playerId)       { return stmts.getExploredByPlayer.all(playerId); }
 function isExplored(playerId, tx, ty, zoom)  { return !!stmts.isExplored.get(playerId, tx, ty, zoom); }
+function isChunkExplored(playerId, chunkTx, chunkTy, chunkW, chunkH, zoom) {
+  return !!stmts.isChunkExplored.get(playerId, chunkTx, chunkTx + chunkW, chunkTy, chunkTy + chunkH, zoom);
+}
 
 function logSolve(playerId, tx, ty, zoom, solveTimeMs) { stmts.logSolve.run(playerId, tx, ty, zoom, solveTimeMs); }
 function getPrevDaySolveTimes()              { return stmts.getPrevDaySolveTimes.all().map(r => r.solve_time_ms); }
@@ -253,6 +257,7 @@ module.exports = {
   exploreTile,
   getExploredByPlayer,
   isExplored,
+  isChunkExplored,
   logSolve,
   getPrevDaySolveTimes,
   addMovementPoints,

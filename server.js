@@ -656,7 +656,9 @@ function handleMoveSettler(req, res) {
       if (!settler || settler.player_id !== player.id)
         return jsonOk(res, { ok: false, error: 'not_found' });
 
-      if (!db.isExplored(player.id, tx, ty, WORLD.zoom))
+      const chunkTx = Math.floor(tx / WORLD.puzzleW) * WORLD.puzzleW;
+      const chunkTy = Math.floor(ty / WORLD.puzzleH) * WORLD.puzzleH;
+      if (!db.isChunkExplored(player.id, chunkTx, chunkTy, WORLD.puzzleW, WORLD.puzzleH, WORLD.zoom))
         return jsonOk(res, { ok: false, error: 'not_explored' });
 
       const path = bresenhamPath(settler.tx, settler.ty, tx, ty);
