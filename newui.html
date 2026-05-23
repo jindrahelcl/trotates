@@ -11,18 +11,20 @@
 <body>
   <div class="game-layout">
 
-    <!-- Left: stats HUD -->
-    <aside class="stats-panel">
-      <a href="/" class="brand logo">Map<span>Rotator</span></a>
+    <header>
+      <a href="/" class="logo">Map<span>Rotator</span></a>
       <nav class="nav-links">
         <a href="/newui" class="nav-active">Game</a>
         <a href="/map">Overview</a>
         <a href="/profile">Profile</a>
       </nav>
+      <span id="hud-player" class="header-player">—</span>
+    </header>
 
-      <div class="hud-section">
-        <div class="hud-player" id="hud-player">—</div>
-      </div>
+    <div class="game-panels">
+
+    <!-- Left: stats HUD -->
+    <aside class="stats-panel">
 
       <div class="hud-section">
         <div class="hud-label">Balance</div>
@@ -67,7 +69,8 @@
       <div id="action-content"></div>
     </aside>
 
-  </div>
+    </div><!-- .game-panels -->
+  </div><!-- .game-layout -->
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/newui.js"></script>

@@ -12,7 +12,14 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
 
 .game-layout {
   display: flex;
+  flex-direction: column;
   height: 100vh;
+}
+
+.game-panels {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 /* ── Stats panel ──────────────────────────────────────────────── */
@@ -29,38 +36,31 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
   overflow-y: auto;
 }
 
-.brand {
-  font-size: 1rem;
-  margin-bottom: 6px;
-}
-
 .nav-links {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin-bottom: 10px;
+  flex-direction: row;
+  gap: 2px;
 }
 .nav-links a {
-  display: block;
-  padding: 6px 10px;
+  padding: 5px 10px;
   border-radius: 5px;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   transition: color 0.15s, background 0.15s;
 }
-.nav-links a:hover  { color: var(--text); background: var(--border); }
+.nav-links a:hover     { color: var(--text); background: var(--border); }
 .nav-links a.nav-active { color: var(--accent2); background: var(--border); }
+
+.header-player {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent2);
+}
 
 .hud-section {
   padding: 10px 0;
   border-top: 1px solid var(--border);
-}
-
-.hud-player {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--accent2);
 }
 
 .hud-label {

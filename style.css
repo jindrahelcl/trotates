@@ -13,17 +13,6 @@ body {
   flex-direction: column;
 }
 
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--panel);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-
 header h1 {
   font-size: 1.3rem;
 }
