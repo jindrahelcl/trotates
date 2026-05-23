@@ -910,6 +910,16 @@ function onMapClick(e) {
 
 document.getElementById('action-close').addEventListener('click', hideActionPanel);
 document.getElementById('puzzle-close-btn').addEventListener('click', hidePuzzle);
+document.getElementById('puzzle-solve-btn').addEventListener('click', () => {
+  if (!puzzle || puzzle.solved) return;
+  puzzle.tiles.forEach((tile, i) => {
+    tile.x = puzzle.baseTiles[i].x;
+    tile.y = puzzle.baseTiles[i].y;
+    tile.rotation = 0;
+    _updateTileDom(i);
+  });
+  checkPuzzleWin();
+});
 
 (async () => {
   try {
