@@ -639,9 +639,9 @@ function handleMoveSettler(req, res) {
       if (player.movement_points < cost)
         return jsonOk(res, { ok: false, error: 'insufficient_points', cost, have: player.movement_points });
 
-      // Check for enemy tiles on path (exclude start and end)
+      // Check for enemy tiles on path (exclude start tile only)
       const enemyTiles = [];
-      for (const { tx: ptx, ty: pty } of path.slice(1, -1)) {
+      for (const { tx: ptx, ty: pty } of path.slice(1)) {
         const tile = db.getTile(ptx, pty, WORLD.zoom);
         if (tile && tile.owner_id !== player.id) {
           const owner = db.findById(tile.owner_id);
