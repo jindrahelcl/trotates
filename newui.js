@@ -967,30 +967,29 @@ function doExplore(chunkTx, chunkTy) {
   showPuzzle(chunkTx, chunkTy, 'explore');
 }
 
-async function doMoveSettler(settler, chunkTx, chunkTy) {
-  showMsg('Moving settler…');
+async function doMoveSettler(settler, tx, ty) {
   try {
     const res = await fetchJSON('/world/settler/move', {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settlerId: settler.id, tx: chunkTx, ty: chunkTy }),
+      body: JSON.stringify({ settlerId: settler.id, tx, ty }),
     });
     if (!res.ok) {
       if (res.error === 'enemy_territory') {
-        showMsg(`Enemy tiles on path: ${res.enemyTiles.map(t => `(${t.tx},${t.ty})`).join(', ')}. Choose a different route.`);
+        showToast(`Enemy territory on path — choose a different route.`, true);
       } else if (res.error === 'insufficient_points') {
-        showMsg(`Not enough points. Need ${res.cost}, have ${state.movementPoints}.`);
+        showToast(`Not enough movement points (need ${res.cost}, have ${state.movementPoints}).`, true);
       } else {
-        showMsg(`Move failed: ${res.error}`);
+        showToast(`Move failed: ${res.error}`, true);
       }
       return;
     }
     state.movementPoints = res.remainingPoints;
     await refreshSettlers();
     await refreshBalance();
-    showActionPanel(chunkTx, chunkTy);
+    showActionPanel(tx, ty);
   } catch (e) {
-    showMsg('Move failed.');
+    showToast('Move failed — check connection.', true);
   }
 }
 
@@ -1001,12 +1000,17 @@ function doSettle(settler) {
   showPuzzle(chunkTx, chunkTy, 'settle', settler.id);
 }
 
-function showMsg(text) {
-  const el = document.getElementById('action-content');
-  const msg = document.createElement('div');
-  msg.className = 'action-msg';
-  msg.textContent = text;
-  el.prepend(msg);
+function showToast(text, isError = false) {
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.textContent = text;
+  container.appendChild(t);
+  requestAnimationFrame(() => { requestAnimationFrame(() => { t.classList.add('show'); }); });
+  setTimeout(() => {
+    t.classList.remove('show');
+    t.addEventListener('transitionend', () => t.remove(), { once: true });
+  }, 3500);
 }
 
 // ── Map click ──────────────────────────────────────────────────────────────
