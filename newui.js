@@ -429,7 +429,7 @@ function initHoverCanvas() {
 
   map.getContainer().addEventListener('mousemove', onMapMouseMove);
   map.getContainer().addEventListener('mouseleave', () => {
-    hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+    redrawHover();
   });
 }
 
