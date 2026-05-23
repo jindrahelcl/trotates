@@ -967,6 +967,9 @@ async function onPuzzleWin(solveTimeMs) {
         <div class="result-title">Area explored!</div>
         <div class="result-reward">+${earned} movement points</div>
         <div class="result-time">Solved in ${fmtSolveTime(solveTimeMs)}</div>`;
+      for (let dy = 0; dy < 4; dy++)
+        for (let dx = 0; dx < 4; dx++)
+          claimedTiles.push({ tx: chunkTx + dx, ty: chunkTy + dy });
     } else {
       const res = await fetchJSON('/world/settler/complete', {
         method: 'POST',
