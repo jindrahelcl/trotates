@@ -350,8 +350,8 @@ function createFogLayer() {
       this._seam.height = h;
       const sc = this._seam.getContext('2d');
       sc.clearRect(0, 0, w, h);
-      sc.strokeStyle = '#0a0a0a';
-      sc.lineWidth = 3;
+      sc.strokeStyle = 'rgba(180,180,200,0.4)';
+      sc.lineWidth = 1;
       for (const key of state.exploredZ13) {
         const [tx, ty] = key.split(',').map(Number);
         const pNW = tileContainerPoint(tx,     ty,     13);
@@ -413,7 +413,7 @@ function redrawHover(chunkTx, chunkTy) {
       const tx = chunkTx + dx, ty = chunkTy + dy;
       const pNW = tileContainerPoint(tx,     ty,     15);
       const pSE = tileContainerPoint(tx + 1, ty + 1, 15);
-      hoverCtx.fillStyle = 'rgba(255,255,255,0.1)';
+      hoverCtx.fillStyle = 'rgba(255,255,255,0.18)';
       hoverCtx.fillRect(pNW.x, pNW.y, pSE.x - pNW.x, pSE.y - pNW.y);
     }
   }
