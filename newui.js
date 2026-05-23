@@ -647,7 +647,7 @@ function _showGhost(idx, x, y) {
   const cell = grid.querySelector('.puzzle-tile');
   _ghostSize = cell ? Math.round(cell.offsetWidth * 1.15) : 92;
   _ghost.el.style.width = _ghost.el.style.height = _ghostSize + 'px';
-  _ghost.img.src = `/tiles/outdoor/15/${puzzle.tiles[idx].x}/${puzzle.tiles[idx].y}`;
+  _ghost.img.src = `/tiles/outdoor/${puzzle.zoom}/${puzzle.tiles[idx].x}/${puzzle.tiles[idx].y}`;
   _ghost.img.style.transform = `rotate(${puzzle.tiles[idx].rotation}deg)`;
   _ghost.el.style.display = 'block';
   _positionGhost(x, y);
@@ -676,7 +676,7 @@ function _updateTileDom(idx) {
   const img = cell.querySelector('img');
   const tile = puzzle.tiles[idx];
   img.style.transition = 'none';
-  img.src = `/tiles/outdoor/15/${tile.x}/${tile.y}`;
+  img.src = `/tiles/outdoor/${puzzle.zoom}/${tile.x}/${tile.y}`;
   img.style.transform = `rotate(${tile.rotation}deg)`;
   void img.offsetWidth; // force reflow — commit before re-enabling transition
   img.style.transition = '';
@@ -814,11 +814,11 @@ _puzzleGrid.addEventListener('touchend', e => {
 });
 _puzzleGrid.addEventListener('touchcancel', _cancelDrag);
 
-function showPuzzle(chunkTx, chunkTy, mode, settlerId = null) {
+function showPuzzle(chunkTx, chunkTy, mode, settlerId = null, zoom = 15) {
   const overlay = document.getElementById('puzzle-overlay');
 
-  // Set zoom-from origin to the chunk's center on screen
-  const origin = map.latLngToContainerPoint(tilePureLatLng(chunkTx + 2, chunkTy + 2, 15));
+  // Set zoom-from origin to the grid's center on screen
+  const origin = map.latLngToContainerPoint(tilePureLatLng(chunkTx + 2, chunkTy + 2, zoom));
   overlay.style.transformOrigin = `${origin.x}px ${origin.y}px`;
 
   // Build the correct tile layout (row-major)
@@ -834,7 +834,7 @@ function showPuzzle(chunkTx, chunkTy, mode, settlerId = null) {
     [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
   }
 
-  puzzle = { tiles, baseTiles, startTime: null, mode, chunkTx, chunkTy, settlerId, solved: false };
+  puzzle = { tiles, baseTiles, startTime: null, mode, chunkTx, chunkTy, settlerId, zoom, solved: false };
   document.getElementById('puzzle-label').textContent = mode === 'explore' ? 'Explore' : 'Settle';
   document.getElementById('puzzle-timer').textContent = '—';
 
@@ -863,7 +863,7 @@ function renderPuzzle() {
     cell.dataset.idx = idx;
 
     const img = document.createElement('img');
-    img.src = `/tiles/outdoor/15/${tile.x}/${tile.y}`;
+    img.src = `/tiles/outdoor/${puzzle.zoom}/${tile.x}/${tile.y}`;
     img.style.transform = `rotate(${tile.rotation}deg)`;
     img.draggable = false;
 
@@ -994,10 +994,10 @@ async function doMoveSettler(settler, tx, ty) {
 }
 
 function doSettle(settler) {
-  const chunkTx = Math.floor(settler.tx / 4) * 4;
-  const chunkTy = Math.floor(settler.ty / 4) * 4;
+  const tx17 = settler.tx * 4;
+  const ty17 = settler.ty * 4;
   hideActionPanel();
-  showPuzzle(chunkTx, chunkTy, 'settle', settler.id);
+  showPuzzle(tx17, ty17, 'settle', settler.id, 17);
 }
 
 function showToast(text, isError = false) {
