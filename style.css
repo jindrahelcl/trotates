@@ -6,7 +6,7 @@
 
 body {
   font-family: system-ui, sans-serif;
-  background: #1a1a2e;
+  background: var(--bg);
   color: #eee;
   min-height: 100vh;
   display: flex;
@@ -20,7 +20,7 @@ header {
   flex-wrap: wrap;
   gap: 8px;
   padding: 10px 16px;
-  background: #16213e;
+  background: var(--panel);
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
@@ -30,7 +30,7 @@ header h1 {
 }
 
 header h1 a {
-  color: #e94560;
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -70,23 +70,23 @@ header h1 a:hover {
   width: 90px;
   padding: 5px 8px;
   border-radius: 5px;
-  border: 1px solid #0f3460;
-  background: #1a1a2e;
+  border: 1px solid var(--border);
+  background: var(--bg);
   color: #eee;
   font-size: 0.82rem;
 }
 
 .controls input[type="text"]:focus {
   outline: none;
-  border-color: #e94560;
+  border-color: var(--accent);
 }
 
 .controls input[type="number"] {
   width: 48px;
   padding: 5px 4px;
   border-radius: 5px;
-  border: 1px solid #0f3460;
-  background: #1a1a2e;
+  border: 1px solid var(--border);
+  background: var(--bg);
   color: #eee;
   font-size: 0.82rem;
   text-align: center;
@@ -94,7 +94,7 @@ header h1 a:hover {
 
 .controls input[type="number"]:focus {
   outline: none;
-  border-color: #e94560;
+  border-color: var(--accent);
 }
 
 button {
@@ -111,7 +111,7 @@ button {
 button:hover { opacity: 0.85; }
 
 #new-game-btn {
-  background: #e94560;
+  background: var(--accent);
   color: #fff;
 }
 
@@ -141,7 +141,7 @@ main {
 }
 
 .tile:hover {
-  box-shadow: 0 0 0 3px #e94560;
+  box-shadow: 0 0 0 3px var(--accent);
   z-index: 1;
 }
 
@@ -150,7 +150,7 @@ main {
 }
 
 .tile.drag-over {
-  box-shadow: 0 0 0 3px #e94560;
+  box-shadow: 0 0 0 3px var(--accent);
   z-index: 2;
 }
 
@@ -215,7 +215,7 @@ main {
 
 .overlay-box {
   position: relative;
-  background: #16213e;
+  background: var(--panel);
   border-radius: 12px;
   padding: 32px 28px;
   text-align: center;
@@ -231,7 +231,7 @@ main {
 .overlay-box h2 {
   font-size: 1.6rem;
   margin-bottom: 12px;
-  color: #e94560;
+  color: var(--accent);
 }
 
 .overlay-box p {
@@ -252,12 +252,12 @@ main {
 }
 
 #admire-btn {
-  background: #0f3460;
+  background: var(--border);
   color: #eee;
 }
 
 #play-again-btn {
-  background: #e94560;
+  background: var(--accent);
   color: #fff;
 }
 
@@ -275,13 +275,13 @@ main {
 
 #win-stats {
   font-size: 1.05rem;
-  color: #4ecca3;
+  color: var(--accent2);
 }
 
 /* Share button */
 .share-btn {
   width: 100%;
-  background: #0f3460;
+  background: var(--border);
   color: #eee;
   margin-bottom: 12px;
   padding: 10px;
@@ -307,20 +307,20 @@ main {
   width: 100px;
   padding: 4px 6px;
   border-radius: 4px;
-  border: 1px solid #0f3460;
-  background: #1a1a2e;
+  border: 1px solid var(--border);
+  background: var(--bg);
   color: #eee;
   font-size: 0.8rem;
 }
 
 .anon-prompt input:focus {
   outline: none;
-  border-color: #e94560;
+  border-color: var(--accent);
 }
 
 .anon-prompt button {
   padding: 4px 10px;
-  background: #0f3460;
+  background: var(--border);
   color: #eee;
   font-size: 0.78rem;
 }
@@ -336,7 +336,7 @@ main {
 /* Tabs */
 .lb-tabs {
   display: flex;
-  border-bottom: 1px solid #0f3460;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 10px;
 }
 
@@ -360,8 +360,8 @@ main {
 }
 
 .lb-tab.active {
-  color: #e94560;
-  border-bottom-color: #e94560;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 .lb-panel.hidden {
@@ -386,7 +386,7 @@ main {
   text-align: left;
   padding: 6px 8px;
   color: #666;
-  border-bottom: 1px solid #0f3460;
+  border-bottom: 1px solid var(--border);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -395,7 +395,7 @@ main {
 #lb-global-table td,
 #lb-campaign-table td {
   padding: 6px 8px;
-  border-bottom: 1px solid #0f3460;
+  border-bottom: 1px solid var(--border);
   color: #ccc;
   white-space: nowrap;
 }
@@ -403,7 +403,7 @@ main {
 #lb-table tbody tr:hover td,
 #lb-global-table tbody tr:hover td,
 #lb-campaign-table tbody tr:hover td {
-  background: #16213e;
+  background: var(--panel);
 }
 
 .lb-empty {
@@ -426,7 +426,7 @@ main {
 }
 
 .lb-avg td {
-  color: #4ecca3;
+  color: var(--accent2);
   font-weight: 600;
   border-bottom: none;
   padding-top: 10px;
@@ -462,13 +462,13 @@ main {
 
 /* ── Campaign ──────────────────────────────────────────────────────────── */
 #campaign-btn {
-  background: #4ecca3;
-  color: #1a1a2e;
+  background: var(--accent2);
+  color: var(--bg);
 }
 
 #campaign-indicator {
   font-size: 0.85rem;
-  color: #4ecca3;
+  color: var(--accent2);
   font-weight: 600;
   min-width: 80px;
 }
@@ -506,9 +506,9 @@ main {
 }
 
 .campaign-level-chip:hover { opacity: 0.8; }
-.campaign-level-chip.done    { background: #4ecca3; color: #1a1a2e; }
-.campaign-level-chip.current { background: #e94560; color: #fff; }
-.campaign-level-chip.locked  { background: #1a1a2e; color: #444; cursor: default; border: 1px solid #333; }
+.campaign-level-chip.done    { background: var(--accent2); color: var(--bg); }
+.campaign-level-chip.current { background: var(--accent); color: #fff; }
+.campaign-level-chip.locked  { background: var(--bg); color: #444; cursor: default; border: 1px solid #333; }
 .campaign-level-chip.locked:hover { opacity: 1; }
 
 .campaign-buttons {
@@ -522,10 +522,10 @@ main {
   font-size: 1rem;
 }
 
-#campaign-start-btn { background: #e94560; color: #fff; }
-#campaign-exit-btn  { background: #0f3460; color: #eee; }
+#campaign-start-btn { background: var(--accent); color: #fff; }
+#campaign-exit-btn  { background: var(--border); color: #eee; }
 
-#intro-start-btn    { background: #e94560; color: #fff; width: 100%; padding: 12px; font-size: 1rem; }
+#intro-start-btn    { background: var(--accent); color: #fff; width: 100%; padding: 12px; font-size: 1rem; }
 
 .intro-nickname-prompt {
   margin-bottom: 16px;
@@ -543,8 +543,8 @@ main {
   width: 160px;
   padding: 6px 10px;
   border-radius: 5px;
-  border: 1px solid #0f3460;
-  background: #1a1a2e;
+  border: 1px solid var(--border);
+  background: var(--bg);
   color: #eee;
   font-size: 0.9rem;
   text-align: center;
@@ -552,7 +552,7 @@ main {
 
 .intro-nickname-prompt input:focus {
   outline: none;
-  border-color: #e94560;
+  border-color: var(--accent);
 }
 
 .campaign-outro {
@@ -562,7 +562,7 @@ main {
   font-style: italic;
 }
 
-#campaign-next-btn { background: #4ecca3; color: #1a1a2e; }
+#campaign-next-btn { background: var(--accent2); color: var(--bg); }
 
 /* ── Account / Auth ────────────────────────────────────────────────────── */
 .player-widget {
@@ -573,14 +573,14 @@ main {
 
 .nick-display {
   font-size: 0.82rem;
-  color: #4ecca3;
+  color: var(--accent2);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .account-btn {
   padding: 2px 6px;
-  background: #0f3460;
+  background: var(--border);
   color: #aaa;
   font-size: 0.72rem;
   border-radius: 4px;
@@ -592,7 +592,7 @@ main {
 .anon-account-btn {
   background: none;
   border: none;
-  color: #4ecca3;
+  color: var(--accent2);
   font-size: 0.8rem;
   padding: 0;
   cursor: pointer;
@@ -622,7 +622,7 @@ main {
   display: flex;
   gap: 0;
   margin-bottom: 18px;
-  border-bottom: 1px solid #0f3460;
+  border-bottom: 1px solid var(--border);
 }
 
 .auth-tab {
@@ -638,7 +638,7 @@ main {
 }
 
 .auth-tab:hover { color: #aaa; }
-.auth-tab.active { color: #eee; border-bottom-color: #4ecca3; }
+.auth-tab.active { color: #eee; border-bottom-color: var(--accent2); }
 
 /* Auth form */
 .auth-form-group {
@@ -650,20 +650,20 @@ main {
   box-sizing: border-box;
   padding: 9px 12px;
   border-radius: 5px;
-  border: 1px solid #0f3460;
-  background: #1a1a2e;
+  border: 1px solid var(--border);
+  background: var(--bg);
   color: #eee;
   font-size: 0.9rem;
 }
 
 .auth-form-group input:focus {
   outline: none;
-  border-color: #4ecca3;
+  border-color: var(--accent2);
 }
 
 .auth-submit-btn {
   width: 100%;
-  background: #e94560;
+  background: var(--accent);
   color: #fff;
   padding: 10px;
   font-size: 0.95rem;
@@ -687,7 +687,7 @@ main {
   content: '';
   flex: 1;
   height: 1px;
-  background: #0f3460;
+  background: var(--border);
 }
 
 #google-signin-btn {
@@ -711,7 +711,7 @@ main {
 
 .battle-nudge {
   font-size: 0.78rem;
-  color: #e94560;
+  color: var(--accent);
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -734,7 +734,7 @@ main {
 
 .auth-signout-btn {
   width: 100%;
-  background: #0f3460;
+  background: var(--border);
   color: #aaa;
   padding: 9px;
   margin-top: 18px;
@@ -744,10 +744,10 @@ main {
 
 .auth-signout-btn:hover { color: #eee; }
 
-.cz-outline { fill: #1a2744; stroke: #4ecca3; stroke-width: 1; }
-.cz-route   { fill: none; stroke: #4ecca355; stroke-width: 1.5; stroke-dasharray: 4 3; }
-.pin-done   { fill: #4ecca3; }
-.pin-current { fill: #e94560; }
+.cz-outline { fill: #1a2744; stroke: var(--accent2); stroke-width: 1; }
+.cz-route   { fill: none; stroke: var(--accent2)55; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.pin-done   { fill: var(--accent2); }
+.pin-current { fill: var(--accent); }
 .pin-locked  { fill: #2a2a4a; stroke: #444; stroke-width: 1; }
-.pin-label  { font-size: 8px; fill: #1a1a2e; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.pin-label  { font-size: 8px; fill: var(--bg); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .pin-label-locked { fill: #555; }

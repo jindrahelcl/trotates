@@ -1,13 +1,5 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
-  --accent:    #e94560;
-  --accent2:   #4ecca3;
-  --bg:        #1a1a2e;
-  --panel:     #16213e;
-  --border:    #0f3460;
-  --sidebar-w: 220px;
-}
 
 html, body { height: 100%; }
 

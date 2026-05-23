@@ -772,7 +772,7 @@ function handleWorldClaim(req, res) {
 const TILE_RE    = /^\/tiles\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/;
 const SHORT_RE   = /^\/s\/([a-z]{10})$/;  // page route — serves index.html
 const RESOLVE_RE = /^\/resolve\/([a-z]{10})$/;  // JSON API — returns tile coords
-const STATIC_FILES = new Set(['index.html', 'style.css', 'game.js', 'welcome.html', 'welcome.css', 'welcome.js', 'tiles-anim.js', 'profile.html', 'profile.css', 'profile.js', 'map.html', 'map.css', 'map.js', 'newui.css', 'newui.js']);
+const STATIC_FILES = new Set(['theme.css', 'index.html', 'style.css', 'game.js', 'welcome.html', 'welcome.css', 'welcome.js', 'tiles-anim.js', 'profile.html', 'profile.css', 'profile.js', 'map.html', 'map.css', 'map.js', 'newui.html', 'newui.css', 'newui.js']);
 
 const server = http.createServer((req, res) => {
   const qIdx  = req.url.indexOf('?');

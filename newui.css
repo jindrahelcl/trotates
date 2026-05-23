@@ -1,13 +1,6 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --accent:   #e94560;
-  --accent2:  #4ecca3;
-  --bg:       #1a1a1a;
-  --panel:    #222;
-  --border:   #333;
-  --text:     #eee;
-  --muted:    #666;
   --stats-w:  210px;
   --action-w: 260px;
 }
@@ -262,7 +255,7 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
-.action-btn:hover { background: #1a3a6a; border-color: var(--accent2); }
+.action-btn:hover { background: #444; border-color: var(--accent2); }
 .action-btn:disabled { opacity: 0.4; cursor: default; }
 .action-btn.primary { background: var(--accent2); color: #111; border-color: var(--accent2); font-weight: 600; }
 .action-btn.primary:hover { background: #3db891; }
