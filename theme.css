@@ -1,3 +1,13 @@
+/* ── Logo ─────────────────────────────────────────────────────────────────── */
+
+.logo {
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-decoration: none;
+  color: var(--text);
+}
+.logo span { color: var(--accent); }
+
 :root {
   --accent:    #e94560;
   --accent2:   #4ecca3;

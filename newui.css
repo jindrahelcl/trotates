@@ -31,13 +31,8 @@ body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--t
 
 .brand {
   font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-  text-decoration: none;
-  letter-spacing: 0.4px;
   margin-bottom: 6px;
 }
-.brand span { color: var(--accent); }
 
 .nav-links {
   display: flex;

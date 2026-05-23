@@ -66,12 +66,6 @@ body {
 
 .welcome-brand h1 {
   font-size: 2rem;
-  letter-spacing: 1px;
-  color: #eee;
-}
-
-.welcome-brand h1 span {
-  color: var(--accent);
 }
 
 .welcome-tagline {
