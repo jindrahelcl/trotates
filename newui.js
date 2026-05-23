@@ -262,42 +262,41 @@ function createOwnershipLayer() {
 
 function createFogLayer() {
   const layer = {
-    _canvas: null,
+    _div: null,
     addTo(m) {
       this._map = m;
-      this._canvas = document.createElement('canvas');
-      this._canvas.className = 'fog-canvas';
-      this._canvas.style.filter = 'blur(10px)';
-      m.getContainer().appendChild(this._canvas);
+      this._div = document.createElement('div');
+      Object.assign(this._div.style, {
+        position: 'absolute',
+        inset: '0',
+        pointerEvents: 'none',
+        zIndex: '400',
+        backdropFilter: 'blur(12px)',
+        webkitBackdropFilter: 'blur(12px)',
+      });
+      m.getContainer().appendChild(this._div);
       m.on('move resize', () => this.redraw(), this);
       this.redraw();
       return this;
     },
     redraw() {
-      if (!this._map || !this._canvas) return;
+      if (!this._map || !this._div) return;
       const m = this._map;
       const size = m.getSize();
-      const PAD = 20;
-      const c = this._canvas;
-      c.width  = size.x + PAD * 2;
-      c.height = size.y + PAD * 2;
-      c.style.left = `-${PAD}px`;
-      c.style.top  = `-${PAD}px`;
+      const w = size.x, h = size.y;
 
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = 'rgba(80,80,80,1)';
-      ctx.fillRect(0, 0, c.width, c.height);
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = '#000';
+      let path = `M0,0 L${w},0 L${w},${h} L0,${h} Z`;
 
       for (const key of state.exploredZ13) {
         const [tx, ty] = key.split(',').map(Number);
         const pNW = tileContainerPoint(tx,     ty,     13);
         const pSE = tileContainerPoint(tx + 1, ty + 1, 13);
-        ctx.fillRect(pNW.x + PAD - 2, pNW.y + PAD - 2, pSE.x - pNW.x + 4, pSE.y - pNW.y + 4);
+        const x1 = Math.floor(pNW.x) - 2, y1 = Math.floor(pNW.y) - 2;
+        const x2 = Math.ceil(pSE.x)  + 2, y2 = Math.ceil(pSE.y)  + 2;
+        path += ` M${x1},${y1} L${x2},${y1} L${x2},${y2} L${x1},${y2} Z`;
       }
 
-      ctx.globalCompositeOperation = 'source-over';
+      this._div.style.clipPath = `path(evenodd, '${path}')`;
     },
   };
   return layer;
