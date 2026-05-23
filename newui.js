@@ -612,9 +612,7 @@ function showActionPanel(chunkTx, chunkTy) {
     // Settler actions
     if (settlerInChunk) {
       const settlerTileClaimed = state.claimedTiles.has(`${settlerInChunk.tx},${settlerInChunk.ty}`);
-      if (settlerInChunk.status === 'settling') {
-        html += `<button class="action-btn primary" id="btn-settle">Resume settling puzzle</button>`;
-      } else if (!settlerTileClaimed) {
+      if (!settlerTileClaimed) {
         html += `<button class="action-btn primary" id="btn-settle">Settle here</button>`;
       } else {
         html += `<div class="action-info">Your settler is here — tile already claimed.</div>`;
@@ -1026,29 +1024,11 @@ async function doMoveSettler(settler, chunkTx, chunkTy) {
   }
 }
 
-async function doSettle(settler) {
-  const btn = document.getElementById('btn-settle');
-  if (btn) btn.disabled = true;
-  try {
-    let chunkTx, chunkTy;
-    if (settler.status === 'settling') {
-      chunkTx = Math.floor(settler.tx / 4) * 4;
-      chunkTy = Math.floor(settler.ty / 4) * 4;
-    } else {
-      const res = await fetchJSON('/world/settler/settle', {
-        method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settlerId: settler.id }),
-      });
-      if (!res.ok) { showMsg(`Cannot settle: ${res.error}`); return; }
-      chunkTx = res.chunkTx;
-      chunkTy = res.chunkTy;
-    }
-    hideActionPanel();
-    showPuzzle(chunkTx, chunkTy, 'settle', settler.id);
-  } catch (e) {
-    showMsg('Settle failed.');
-  }
+function doSettle(settler) {
+  const chunkTx = Math.floor(settler.tx / 4) * 4;
+  const chunkTy = Math.floor(settler.ty / 4) * 4;
+  hideActionPanel();
+  showPuzzle(chunkTx, chunkTy, 'settle', settler.id);
 }
 
 function showMsg(text) {
