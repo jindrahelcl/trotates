@@ -916,10 +916,24 @@ function checkPuzzleWin() {
   setTimeout(() => onPuzzleWin(Date.now() - puzzle.startTime), 900);
 }
 
+function fmtSolveTime(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
 async function onPuzzleWin(solveTimeMs) {
   const { mode, chunkTx, chunkTy, settlerId } = puzzle;
+
+  const grid   = document.getElementById('puzzle-grid');
+  const result = document.getElementById('puzzle-result');
+  grid.style.display   = 'none';
+  result.style.display = 'flex';
+  result.innerHTML     = '<div class="result-status">Submitting…</div>';
+
+  let claimedTiles = [];
   try {
     if (mode === 'explore') {
+      const prevPoints = state.movementPoints;
       const tx = chunkTx + Math.floor(Math.random() * 4);
       const ty = chunkTy + Math.floor(Math.random() * 4);
       const res = await fetchJSON('/world/explore', {
@@ -930,6 +944,11 @@ async function onPuzzleWin(solveTimeMs) {
       const { tx: tx13, ty: ty13 } = z15toZ13(tx, ty);
       state.exploredZ13.add(`${tx13},${ty13}`);
       state.movementPoints = res.totalPoints;
+      const earned = res.totalPoints - prevPoints;
+      result.innerHTML = `
+        <div class="result-title">Area explored!</div>
+        <div class="result-reward">+${earned} movement points</div>
+        <div class="result-time">Solved in ${fmtSolveTime(solveTimeMs)}</div>`;
     } else {
       const res = await fetchJSON('/world/settler/complete', {
         method: 'POST',
@@ -937,20 +956,55 @@ async function onPuzzleWin(solveTimeMs) {
         body: JSON.stringify({ settlerId, solveTimeMs }),
       });
       if (res.ok) {
+        claimedTiles = res.claimed;
         for (const t of res.claimed) {
           const k13 = z15toZ13(t.tx, t.ty);
           state.exploredZ13.add(`${k13.tx},${k13.ty}`);
           state.claimedTiles.set(`${t.tx},${t.ty}`, { owner: state.player.nickname, ownerHue: null });
         }
-        await Promise.all([refreshSettlers(), refreshBalance()]);
+        const bonusCount = res.claimed.filter(t => t.bonus).length;
+        const bonusHtml  = bonusCount > 0
+          ? `<div class="result-bonus">+${bonusCount} bonus tile${bonusCount > 1 ? 's' : ''}</div>`
+          : '';
+        result.innerHTML = `
+          <div class="result-title">Territory settled!</div>
+          <div class="result-reward">${res.claimed.length} tile${res.claimed.length !== 1 ? 's' : ''} claimed</div>
+          ${bonusHtml}
+          <div class="result-time">Solved in ${fmtSolveTime(solveTimeMs)}</div>`;
+        refreshSettlers();
+        refreshBalance();
         if (ownershipLayer) ownershipLayer.redraw();
       }
     }
-  } catch (e) { console.error('Puzzle win failed:', e); }
+  } catch (e) {
+    console.error('Puzzle win failed:', e);
+    hidePuzzle();
+    fogLayer.redraw();
+    updateMapBounds();
+    return;
+  }
 
-  hidePuzzle();
   fogLayer.redraw();
   updateMapBounds();
+  setTimeout(() => {
+    hidePuzzle();
+    if (claimedTiles.length) flashClaimedTiles(claimedTiles);
+  }, 2500);
+}
+
+function flashClaimedTiles(tiles) {
+  tiles.forEach((t, i) => {
+    setTimeout(() => {
+      const sw   = tilePureLatLng(t.tx, t.ty + 1, 15);
+      const ne   = tilePureLatLng(t.tx + 1, t.ty, 15);
+      const rect = L.rectangle([sw, ne], {
+        color: '#4ecca3', weight: 2,
+        fillColor: '#4ecca3', fillOpacity: 0.55,
+        className: 'tile-flash',
+      }).addTo(map);
+      setTimeout(() => map.removeLayer(rect), 1800);
+    }, i * 80);
+  });
 }
 
 function hidePuzzle() {
@@ -959,6 +1013,8 @@ function hidePuzzle() {
   setTimeout(() => {
     if (_puzzleTimerRaf) { cancelAnimationFrame(_puzzleTimerRaf); _puzzleTimerRaf = null; }
     document.getElementById('puzzle-grid').innerHTML = '';
+    const r = document.getElementById('puzzle-result');
+    r.style.display = 'none'; r.innerHTML = '';
     puzzle = null;
   }, 380);
 }
