@@ -492,9 +492,9 @@ function updateSettlerMarkers() {
     const ll = tileLatLng(s.tx + 0.5, s.ty + 0.5, 15);
     const icon = L.divIcon({
       className: '',
-      html: `<div class="settler-marker ${s.status === 'settling' ? 'settling' : ''}" data-id="${s.id}"></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
+      html: `<div class="settler-marker ${s.status === 'settling' ? 'settling' : ''}" data-id="${s.id}">S</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
     });
     const marker = L.marker(ll, { icon, zIndexOffset: 1000 });
     marker.on('click', (e) => {
