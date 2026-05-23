@@ -448,6 +448,19 @@ function tileFromContainerPoint(px, py) {
 function redrawHover(tx, ty, size = 1) {
   resizeHoverCanvas();
   hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
+
+  if (selectedChunk) {
+    const { tx: stx, ty: sty, size: ssz } = selectedChunk;
+    const pNW = tileContainerPoint(stx,       sty,       15);
+    const pSE = tileContainerPoint(stx + ssz, sty + ssz, 15);
+    const w = pSE.x - pNW.x, h = pSE.y - pNW.y;
+    hoverCtx.fillStyle = 'rgba(78,204,163,0.14)';
+    hoverCtx.fillRect(pNW.x, pNW.y, w, h);
+    hoverCtx.strokeStyle = '#4ecca3';
+    hoverCtx.lineWidth = 2;
+    hoverCtx.strokeRect(pNW.x + 1, pNW.y + 1, w - 2, h - 2);
+  }
+
   if (tx == null) return;
   const pNW = tileContainerPoint(tx,        ty,        15);
   const pSE = tileContainerPoint(tx + size, ty + size, 15);
@@ -541,13 +554,17 @@ function updateHUD() {
 // ── Action panel ───────────────────────────────────────────────────────────
 
 function showActionPanel(tx, ty) {
-  selectedChunk = { tx, ty };
   const panel   = document.getElementById('action-panel');
   const content = document.getElementById('action-content');
   panel.classList.remove('hidden');
 
   const { tx: tx13, ty: ty13 } = z15toZ13(tx, ty);
   const isExplored = state.exploredZ13.has(`${tx13},${ty13}`);
+  const selSize = isExplored ? 1 : 4;
+  const selTx   = isExplored ? tx : Math.floor(tx / 4) * 4;
+  const selTy   = isExplored ? ty : Math.floor(ty / 4) * 4;
+  selectedChunk = { tx: selTx, ty: selTy, size: selSize };
+  redrawHover();
   const isAdjacentToExplored = !isExplored && [
     [tx13-1,ty13],[tx13+1,ty13],[tx13,ty13-1],[tx13,ty13+1],
   ].some(([x,y]) => state.exploredZ13.has(`${x},${y}`));
@@ -624,6 +641,7 @@ function showActionPanel(tx, ty) {
 
 function hideActionPanel() {
   selectedChunk = null;
+  redrawHover();
   document.getElementById('action-panel').classList.add('hidden');
   document.getElementById('action-content').innerHTML = '';
 }
