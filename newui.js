@@ -445,12 +445,12 @@ function tileFromContainerPoint(px, py) {
   return { tx: Math.floor(pt.x / 256), ty: Math.floor(pt.y / 256) };
 }
 
-function redrawHover(tx, ty) {
+function redrawHover(tx, ty, size = 1) {
   resizeHoverCanvas();
   hoverCtx.clearRect(0, 0, hoverCanvas.width, hoverCanvas.height);
   if (tx == null) return;
-  const pNW = tileContainerPoint(tx,     ty,     15);
-  const pSE = tileContainerPoint(tx + 1, ty + 1, 15);
+  const pNW = tileContainerPoint(tx,        ty,        15);
+  const pSE = tileContainerPoint(tx + size, ty + size, 15);
   hoverCtx.fillStyle = 'rgba(255,255,255,0.18)';
   hoverCtx.fillRect(pNW.x, pNW.y, pSE.x - pNW.x, pSE.y - pNW.y);
 }
@@ -459,9 +459,13 @@ let _lastHoverTile = null;
 function onMapMouseMove(e) {
   const rect = map.getContainer().getBoundingClientRect();
   const { tx, ty } = tileFromContainerPoint(e.clientX - rect.left, e.clientY - rect.top);
-  if (_lastHoverTile && _lastHoverTile.tx === tx && _lastHoverTile.ty === ty) return;
-  _lastHoverTile = { tx, ty };
-  redrawHover(tx, ty);
+  const { tx: tx13, ty: ty13 } = z15toZ13(tx, ty);
+  const isExplored = state.exploredZ13.has(`${tx13},${ty13}`);
+  const hTx = isExplored ? tx : Math.floor(tx / 4) * 4;
+  const hTy = isExplored ? ty : Math.floor(ty / 4) * 4;
+  if (_lastHoverTile && _lastHoverTile.tx === hTx && _lastHoverTile.ty === hTy) return;
+  _lastHoverTile = { tx: hTx, ty: hTy };
+  redrawHover(hTx, hTy, isExplored ? 1 : 4);
 }
 
 // ── Settler markers ────────────────────────────────────────────────────────
@@ -560,17 +564,18 @@ function showActionPanel(tx, ty) {
   const chunkTx = Math.floor(tx / 4) * 4;
   const chunkTy = Math.floor(ty / 4) * 4;
 
-  let html = `
-    <div class="action-title">Tile</div>
-    <div class="action-coords">(${tx}, ${ty}) · z15</div>
-    <hr class="action-divider">
-  `;
+  let html = isExplored
+    ? `<div class="action-title">Tile</div>
+       <div class="action-coords">(${tx}, ${ty}) · z15</div>`
+    : `<div class="action-title">Chunk</div>
+       <div class="action-coords">(${chunkTx}, ${chunkTy}) · z15</div>`;
+  html += `<hr class="action-divider">`;
 
   if (!isExplored) {
     if (isAdjacentToExplored) {
-      html += `<button class="action-btn primary" id="btn-explore">Explore this area</button>`;
+      html += `<button class="action-btn primary" id="btn-explore">Explore this chunk</button>`;
     } else {
-      html += `<div class="action-fog">Unexplored — explore adjacent tiles first.</div>`;
+      html += `<div class="action-fog">Unexplored — explore adjacent chunks first.</div>`;
     }
   } else {
     if (tileData) {
